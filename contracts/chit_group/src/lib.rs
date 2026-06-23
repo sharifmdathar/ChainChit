@@ -116,6 +116,155 @@ pub struct ChitGroupContract;
 
 #[contractimpl]
 impl ChitGroupContract {
+    /// Initialize a new chit group. The admin becomes the first member.
+    pub fn initialize(
+        env: Env,
+        admin: Address,
+        token: Address,
+        reputation_contract: Address,
+        identity_contract: Address,
+        dispute_contract: Address,
+        contribution_amount: u64,
+        num_members: u32,
+        total_cycles: u32,
+        min_attestation_score: u32,
+        min_reputation_for_bid: u32,
+    ) -> Result<(), Error> {
+        admin.require_auth();
+
+        if contribution_amount == 0 {
+            return Err(Error::InvalidAmount);
+        }
+        if num_members < 2 {
+            return Err(Error::InvalidAmount);
+        }
+        if total_cycles < 2 {
+            return Err(Error::InvalidAmount);
+        }
+
+        // Ensure no prior initialization
+        if env.storage().instance().has(&DataKey::GroupInfo) {
+            return Err(Error::ContractNotRegistered);
+        }
+
+        let info = GroupInfo {
+            admin: admin.clone(),
+            token,
+            reputation_contract: reputation_contract.clone(),
+            identity_contract: identity_contract.clone(),
+            dispute_contract,
+            contribution_amount,
+            num_members,
+            total_cycles,
+            current_cycle: 0,
+            state: GroupState::Forming,
+            min_attestation_score,
+            min_reputation_for_bid,
+        };
+
+        env.storage().instance().set(&DataKey::GroupInfo, &info);
+
+        let members: Vec<Address> = Vec::new(&env);
+        env.storage().instance().set(&DataKey::Members, &members);
+
+        Ok(())
+    }
+
+    /// Join a group that is in the Forming state.
+    /// Caller must be attested in the Identity contract above the minimum threshold.
+    pub fn join_group(env: Env, caller: Address) -> Result<(), Error> {
+        caller.require_auth();
+
+        let mut info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if info.state != GroupState::Forming {
+            return Err(Error::NotForming);
+        }
+
+        let mut members: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&DataKey::Members)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        // Check not already a member
+        for i in 0..members.len() {
+            if members.get(i).unwrap() == caller {
+                return Err(Error::AlreadyMember);
+            }
+        }
+
+        // Check group not full
+        if members.len() >= info.num_members {
+            return Err(Error::GroupFull);
+        }
+
+        // Check attestation via Identity contract
+        let att_score = Self::check_attestation(&env, &info.identity_contract, &caller)?;
+        if att_score < info.min_attestation_score {
+            return Err(Error::NotAttested);
+        }
+
+        // Add member
+        let idx = members.len();
+        members.push_back(caller.clone());
+        env.storage().instance().set(&DataKey::Members, &members);
+        env.storage()
+            .instance()
+            .set(&DataKey::MemberIndex(caller.clone()), &idx);
+
+        Ok(())
+    }
+
+    /// Admin transitions the group from Forming to Collecting (cycle 1).
+    pub fn start_collection(env: Env, caller: Address) -> Result<(), Error> {
+        caller.require_auth();
+
+        let mut info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if caller != info.admin {
+            return Err(Error::NotAdmin);
+        }
+        if info.state != GroupState::Forming {
+            return Err(Error::NotForming);
+        }
+
+        let members: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&DataKey::Members)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if members.len() < info.num_members {
+            return Err(Error::GroupFull); // repurposed: group not yet full
+        }
+
+        info.current_cycle = 1;
+        info.state = GroupState::Collecting;
+        env.storage().instance().set(&DataKey::GroupInfo, &info);
+
+        // Initialize cycle state
+        let cycle = CycleState {
+            payments: Map::new(&env),
+            bids: Map::new(&env),
+            winner: None,
+            winning_bid: 0,
+        };
+        env.storage()
+            .instance()
+            .set(&DataKey::Cycle(1), &cycle);
+
+        Ok(())
+    }
+
     // -----------------------------------------------------------------------
     // Internal helpers (storage access patterns)
     // -----------------------------------------------------------------------
