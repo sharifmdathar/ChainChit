@@ -653,6 +653,129 @@ impl ChitGroupContract {
         Ok(())
     }
 
+    /// Emergency pause — admin only.
+    pub fn pause(env: Env, caller: Address) -> Result<(), Error> {
+        caller.require_auth();
+
+        let mut info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if caller != info.admin {
+            return Err(Error::NotAdmin);
+        }
+
+        info.state = GroupState::Paused;
+        env.storage().instance().set(&DataKey::GroupInfo, &info);
+        Ok(())
+    }
+
+    /// Unpause — admin only, returns to the state before pause.
+    pub fn unpause(env: Env, caller: Address, resume_state: GroupState) -> Result<(), Error> {
+        caller.require_auth();
+
+        let mut info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if caller != info.admin {
+            return Err(Error::NotAdmin);
+        }
+        if info.state != GroupState::Paused {
+            return Err(Error::InvalidState);
+        }
+
+        match resume_state {
+            GroupState::Forming
+            | GroupState::Collecting
+            | GroupState::Bidding
+            | GroupState::Payout => {
+                info.state = resume_state;
+                env.storage().instance().set(&DataKey::GroupInfo, &info);
+                Ok(())
+            }
+            _ => Err(Error::InvalidState),
+        }
+    }
+
+    /// Update linked contract addresses — admin only.
+    pub fn update_contracts(
+        env: Env,
+        caller: Address,
+        reputation: Option<Address>,
+        identity: Option<Address>,
+        dispute: Option<Address>,
+    ) -> Result<(), Error> {
+        caller.require_auth();
+
+        let mut info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if caller != info.admin {
+            return Err(Error::NotAdmin);
+        }
+
+        if let Some(r) = reputation {
+            info.reputation_contract = r;
+        }
+        if let Some(i) = identity {
+            info.identity_contract = i;
+        }
+        if let Some(d) = dispute {
+            info.dispute_contract = d;
+        }
+
+        env.storage().instance().set(&DataKey::GroupInfo, &info);
+        Ok(())
+    }
+
+    // -----------------------------------------------------------------------
+    // View functions
+    // -----------------------------------------------------------------------
+
+    pub fn get_group_info(env: Env) -> Result<GroupInfo, Error> {
+        env.storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)
+    }
+
+    pub fn get_members(env: Env) -> Result<Vec<Address>, Error> {
+        env.storage()
+            .instance()
+            .get(&DataKey::Members)
+            .ok_or(Error::ContractNotRegistered)
+    }
+
+    pub fn get_cycle_state(env: Env, cycle: u32) -> Result<CycleState, Error> {
+        env.storage()
+            .instance()
+            .get(&DataKey::Cycle(cycle))
+            .ok_or(Error::CycleNotFound)
+    }
+
+    pub fn get_member_payment_status(
+        env: Env,
+        cycle: u32,
+        member: Address,
+    ) -> Result<MemberStatus, Error> {
+        let cs: CycleState = env
+            .storage()
+            .instance()
+            .get(&DataKey::Cycle(cycle))
+            .ok_or(Error::CycleNotFound)?;
+        cs.payments
+            .get(member)
+            .ok_or(Error::ContractNotRegistered)
+    }
+
     // -----------------------------------------------------------------------
     // Internal helpers (storage access patterns)
     // -----------------------------------------------------------------------
