@@ -429,6 +429,230 @@ impl ChitGroupContract {
         Ok(())
     }
 
+    /// Commit a bid hash during the Bidding phase.
+    /// commitment = sha256(bid_amount_le_bytes || nonce_le_bytes)
+    pub fn commit_bid(env: Env, caller: Address, commitment: Vec<u8>) -> Result<(), Error> {
+        caller.require_auth();
+
+        let info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if info.state != GroupState::Bidding {
+            return Err(Error::NotBidding);
+        }
+
+        Self::ensure_member(&env, &caller)?;
+
+        // Reputation gate: check on-time ratio
+        let ratio = Self::get_reputation_ratio(&env, &info.reputation_contract, &caller);
+        if ratio < info.min_reputation_for_bid {
+            return Err(Error::ReputationTooLow);
+        }
+
+        let cycle_key = DataKey::Cycle(info.current_cycle);
+        let mut cycle: CycleState = env
+            .storage()
+            .instance()
+            .get(&cycle_key)
+            .ok_or(Error::CycleNotFound)?;
+
+        if cycle.bids.get(caller.clone()).is_some() {
+            return Err(Error::AlreadyCommitted);
+        }
+
+        if commitment.len() != 32 {
+            return Err(Error::InvalidReveal);
+        }
+
+        let bid = BidRecord {
+            commitment,
+            revealed: false,
+            amount: 0,
+        };
+        cycle.bids.set(caller, bid);
+        env.storage().instance().set(&cycle_key, &cycle);
+
+        Ok(())
+    }
+
+    /// Reveal a previously committed bid.
+    pub fn reveal_bid(
+        env: Env,
+        caller: Address,
+        amount: u64,
+        nonce: u64,
+    ) -> Result<(), Error> {
+        caller.require_auth();
+
+        let info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if info.state != GroupState::Bidding {
+            return Err(Error::NotBidding);
+        }
+
+        let cycle_key = DataKey::Cycle(info.current_cycle);
+        let mut cycle: CycleState = env
+            .storage()
+            .instance()
+            .get(&cycle_key)
+            .ok_or(Error::CycleNotFound)?;
+
+        let mut bid: BidRecord = cycle
+            .bids
+            .get(caller.clone())
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if bid.revealed {
+            return Err(Error::AlreadyRevealed);
+        }
+
+        // Verify commitment = sha256(amount_le || nonce_le)
+        let expected = Self::compute_commitment(&env, amount, nonce);
+        if expected != bid.commitment {
+            return Err(Error::InvalidReveal);
+        }
+
+        // Bid amount must be > 0 and <= contribution_amount (the "discount" the winner accepts)
+        if amount == 0 || amount > info.contribution_amount {
+            return Err(Error::BidTooLow);
+        }
+
+        bid.revealed = true;
+        bid.amount = amount;
+        cycle.bids.set(caller, bid);
+        env.storage().instance().set(&cycle_key, &cycle);
+
+        Ok(())
+    }
+
+    /// Anyone can call this after the bidding phase to execute the payout.
+    /// Finds the lowest unique bid among revealed bids.
+    /// Transfers the full pool (contribution_amount * num_members) to the winner.
+    pub fn execute_payout(env: Env) -> Result<(), Error> {
+        let mut info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if info.state != GroupState::Bidding {
+            return Err(Error::NotBidding);
+        }
+
+        let cycle_key = DataKey::Cycle(info.current_cycle);
+        let mut cycle: CycleState = env
+            .storage()
+            .instance()
+            .get(&cycle_key)
+            .ok_or(Error::CycleNotFound)?;
+
+        let members: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&DataKey::Members)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        // Collect all revealed bid amounts and find lowest unique
+        let mut bid_amounts: Map<u64, u32> = Map::new(&env); // amount -> count
+        let mut bidder_for_amount: Map<u64, Address> = Map::new(&env);
+
+        for i in 0..members.len() {
+            let m = members.get(i).unwrap();
+            if let Some(bid) = cycle.bids.get(m.clone()) {
+                if bid.revealed && bid.amount > 0 {
+                    let count = bid_amounts.get(bid.amount).unwrap_or(0) + 1;
+                    bid_amounts.set(bid.amount, count);
+                    bidder_for_amount.set(bid.amount, m.clone());
+                }
+            }
+        }
+
+        // Find lowest amount with count == 1
+        let mut winner: Option<Address> = None;
+        let mut winning_bid: u64 = u64::MAX;
+
+        let amounts: Vec<u64> = bid_amounts.keys();
+        for i in 0..amounts.len() {
+            let amt = amounts.get(i).unwrap();
+            let cnt = bid_amounts.get(amt).unwrap_or(0);
+            if cnt == 1 && amt < winning_bid {
+                winning_bid = amt;
+                winner = bidder_for_amount.get(amt);
+            }
+        }
+
+        let winner_addr = winner.ok_or(Error::NoValidBids)?;
+
+        // Payout: transfer pool to winner
+        let pool_size = (info.contribution_amount as u128)
+            .checked_mul(info.num_members as u128)
+            .ok_or(Error::InvalidAmount)? as u64;
+
+        Self::transfer_token(
+            &env,
+            &info.token,
+            &env.current_contract_address(),
+            &winner_addr,
+            pool_size,
+        )?;
+
+        cycle.winner = Some(winner_addr.clone());
+        cycle.winning_bid = winning_bid;
+        env.storage().instance().set(&cycle_key, &cycle);
+
+        // Update reputation: record bid won
+        Self::call_reputation_record_bid_won(
+            &env,
+            &info.reputation_contract,
+            &winner_addr,
+        );
+
+        // Transition to Payout state
+        info.state = GroupState::Payout;
+        env.storage().instance().set(&DataKey::GroupInfo, &info);
+
+        Ok(())
+    }
+
+    /// Raise a dispute — routes to the Dispute contract.
+    pub fn raise_dispute(env: Env, caller: Address, reason: String) -> Result<(), Error> {
+        caller.require_auth();
+
+        let info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        Self::ensure_member(&env, &caller)?;
+
+        if info.state == GroupState::Completed {
+            return Err(Error::AlreadyCompleted);
+        }
+
+        // Cross-contract call to Dispute contract
+        let args = soroban_sdk::vec![
+            &env,
+            caller.to_val(),
+            (info.current_cycle as u64).to_val(),
+            reason.to_val(),
+        ];
+        env.invoke_contract(
+            &info.dispute_contract,
+            &Symbol::short("raise_dispute"),
+            &args,
+        );
+
+        Ok(())
+    }
+
     // -----------------------------------------------------------------------
     // Internal helpers (storage access patterns)
     // -----------------------------------------------------------------------
