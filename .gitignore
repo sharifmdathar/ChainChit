@@ -1,0 +1,9 @@
+target/
+node_modules/
+.next/
+.env
+.env.local
+*.wasm
+soroban-sqlite*.db
+.DS_Store
+*.log
