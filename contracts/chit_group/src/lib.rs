@@ -265,6 +265,170 @@ impl ChitGroupContract {
         Ok(())
     }
 
+    /// A member pays their contribution for the current cycle.
+    /// Transfers USDC from caller to this contract.
+    /// Atomically updates Reputation contract.
+    pub fn pay_contribution(env: Env, caller: Address) -> Result<(), Error> {
+        caller.require_auth();
+
+        let info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if info.state != GroupState::Collecting {
+            return Err(Error::NotCollecting);
+        }
+
+        // Verify caller is a member
+        Self::ensure_member(&env, &caller)?;
+
+        let cycle_key = DataKey::Cycle(info.current_cycle);
+        let mut cycle: CycleState = env
+            .storage()
+            .instance()
+            .get(&cycle_key)
+            .ok_or(Error::CycleNotFound)?;
+
+        if let Some(status) = cycle.payments.get(caller.clone()) {
+            match status {
+                MemberStatus::Paid => return Err(Error::AlreadyPaid),
+                _ => {}
+            }
+        }
+
+        // Transfer USDC: caller → this contract
+        Self::transfer_token(
+            &env,
+            &info.token,
+            &caller,
+            &env.current_contract_address(),
+            info.contribution_amount,
+        )?;
+
+        // Mark as paid
+        cycle.payments.set(caller.clone(), MemberStatus::Paid);
+        env.storage().instance().set(&cycle_key, &cycle);
+
+        // Cross-contract: update reputation (on-time payment)
+        Self::call_reputation_record_payment(
+            &env,
+            &info.reputation_contract,
+            &caller,
+            true,
+        );
+
+        // Check if all members have paid — auto-transition to Bidding
+        let members: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&DataKey::Members)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        let mut all_paid = true;
+        for i in 0..members.len() {
+            let m = members.get(i).unwrap();
+            let paid = cycle
+                .payments
+                .get(m.clone())
+                .map_or(false, |s| s == MemberStatus::Paid);
+            if !paid {
+                all_paid = false;
+                break;
+            }
+        }
+
+        if all_paid {
+            let mut info_mut: GroupInfo = env
+                .storage()
+                .instance()
+                .get(&DataKey::GroupInfo)
+                .ok_or(Error::ContractNotRegistered)?;
+            info_mut.state = GroupState::Bidding;
+            env.storage().instance().set(&DataKey::GroupInfo, &info_mut);
+        }
+
+        Ok(())
+    }
+
+    /// Advance to the next cycle or complete the group.
+    pub fn advance_cycle(env: Env, caller: Address) -> Result<(), Error> {
+        caller.require_auth();
+
+        let mut info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if caller != info.admin {
+            return Err(Error::NotAdmin);
+        }
+        if info.state != GroupState::Payout {
+            return Err(Error::NotPayout);
+        }
+
+        let members: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&DataKey::Members)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        let cycle_key = DataKey::Cycle(info.current_cycle);
+        let cycle: CycleState = env
+            .storage()
+            .instance()
+            .get(&cycle_key)
+            .ok_or(Error::CycleNotFound)?;
+
+        // Record cycle completion for all paying members, default for non-payers
+        for i in 0..members.len() {
+            let m = members.get(i).unwrap();
+            let status = cycle.payments.get(m.clone()).unwrap_or(MemberStatus::Pending);
+            match status {
+                MemberStatus::Paid => {
+                    Self::call_reputation_record_cycle_completed(
+                        &env,
+                        &info.reputation_contract,
+                        &m,
+                    );
+                }
+                _ => {
+                    Self::call_reputation_record_default(
+                        &env,
+                        &info.reputation_contract,
+                        &m,
+                    );
+                }
+            }
+        }
+
+        if info.current_cycle >= info.total_cycles {
+            info.state = GroupState::Completed;
+            env.storage().instance().set(&DataKey::GroupInfo, &info);
+            return Ok(());
+        }
+
+        // Advance to next cycle
+        info.current_cycle += 1;
+        info.state = GroupState::Collecting;
+        env.storage().instance().set(&DataKey::GroupInfo, &info);
+
+        // Initialize new cycle state
+        let new_cycle = CycleState {
+            payments: Map::new(&env),
+            bids: Map::new(&env),
+            winner: None,
+            winning_bid: 0,
+        };
+        env.storage()
+            .instance()
+            .set(&DataKey::Cycle(info.current_cycle), &new_cycle);
+
+        Ok(())
+    }
+
     // -----------------------------------------------------------------------
     // Internal helpers (storage access patterns)
     // -----------------------------------------------------------------------
