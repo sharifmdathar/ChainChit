@@ -14,6 +14,7 @@
 import { execSync } from "child_process";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
+import { Keypair } from "@stellar/stellar-sdk";
 
 const NETWORK = process.env.NETWORK || "testnet";
 const RPC_URL =
@@ -31,7 +32,7 @@ if (!SECRET_KEY) {
   process.exit(1);
 }
 
-const ROOT_DIR = join(__dirname, "..");
+const ROOT_DIR = process.cwd();
 const ENV_FILE = join(ROOT_DIR, "frontend", ".env.local");
 
 interface DeployResult {
@@ -70,7 +71,7 @@ function buildWasm(contractDir: string): string {
 function deployWasm(wasmPath: string): string {
   console.log(`Deploying ${wasmPath}...`);
   const output = run(
-    `soroban contract deploy --wasm ${wasmPath} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} 2>&1`
+    `stellar contract deploy --wasm ${wasmPath} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} 2>&1`
   );
   // Extract contract ID from output
   const match = output.match(/[A-Z0-9]{56}/);
@@ -87,7 +88,7 @@ function invokeInit(
 ): void {
   console.log(`Initializing ${method}...`);
   run(
-    `soroban contract invoke --id ${contractId} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} -- ${method} ${args} 2>&1`
+    `stellar contract invoke --id ${contractId} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} -- ${method} ${args} 2>&1`
   );
 }
 
@@ -127,20 +128,30 @@ async function main() {
   console.log("Step 3: Initializing contracts...\n");
 
   // Derive admin address from secret key
-  const adminOutput = run(
-    `sorobain wallet address --source ${SECRET_KEY} 2>&1 || echo ""`
-  );
-  const adminMatch = adminOutput.match(/[A-Z0-9]{56}/);
-  const adminAddress = adminMatch ? adminMatch[0] : "";
+  let adminAddress = "";
+  try {
+    adminAddress = Keypair.fromSecret(SECRET_KEY!).publicKey();
+  } catch (err) {
+    console.error("WARNING: Could not derive admin address from secret key.", err);
+  }
 
   if (!adminAddress) {
     console.error("WARNING: Could not derive admin address. Manual init required.");
   } else {
+    const dummy1 = Keypair.random().publicKey();
+    const dummy2 = Keypair.random().publicKey();
+
     // Init Reputation
     invokeInit(
       reputationId,
       "initialize",
-      `--admin ${adminAddress} --authorized_group ${chitGroupId}`
+      `--admin ${adminAddress} --min_payments_for_trust 3`
+    );
+
+    // Authorize ChitGroup contract in Reputation
+    console.log("Authorizing ChitGroup in Reputation...");
+    run(
+      `stellar contract invoke --id ${reputationId} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} -- authorize_group --caller ${adminAddress} --group ${chitGroupId} 2>&1`
     );
 
     // Init Identity
@@ -154,7 +165,13 @@ async function main() {
     invokeInit(
       disputeId,
       "initialize",
-      `--admin ${adminAddress} --arbitrators '["${adminAddress}"]' --required_votes 1 --reputation_contract ${reputationId}`
+      `--admin ${adminAddress} --arbitrators '["${adminAddress}", "${dummy1}", "${dummy2}"]' --required_votes 2 --reputation_contract ${reputationId}`
+    );
+
+    // Authorize ChitGroup contract in Dispute
+    console.log("Authorizing ChitGroup in Dispute...");
+    run(
+      `stellar contract invoke --id ${disputeId} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} -- authorize_group --caller ${adminAddress} --group ${chitGroupId} 2>&1`
     );
   }
 
