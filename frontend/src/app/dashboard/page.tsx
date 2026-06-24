@@ -5,9 +5,8 @@ import { useWallet } from "@/hooks/useWallet";
 import { useReputation } from "@/hooks/useReputation";
 import { ReputationBadge } from "@/components/ReputationBadge";
 import { GroupCard } from "@/components/GroupCard";
-import { formatInr, basisPointsToPercent } from "@/lib/utils";
-import { initiateSep24Deposit, initiateSep24Withdraw, getSep24Url } from "@/lib/stellar";
-import { getGroupInfo, getMembers } from "@/lib/contracts";
+import Sep24Ramp from "@/components/Sep24Ramp";
+import { basisPointsToPercent } from "@/lib/utils";
 import type { GroupInfo } from "@/types";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -23,9 +22,6 @@ export default function DashboardPage() {
   const { compositeScore, onTimeRatio, established, fetchScore } = useReputation();
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
   const [loading, setLoading] = useState(true);
-  const [depositAmount, setDepositAmount] = useState("");
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const sep24Available = !!getSep24Url();
 
   useEffect(() => {
     if (connected && address) {
@@ -48,28 +44,6 @@ export default function DashboardPage() {
     }
     if (connected) loadGroups();
   }, [connected]);
-
-  const handleDeposit = async () => {
-    if (!address || !depositAmount) return;
-    try {
-      const url = await initiateSep24Deposit(address, depositAmount);
-      window.open(url, "_blank", "width=600,height=800");
-      toast.success("Deposit flow opened");
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Deposit failed");
-    }
-  };
-
-  const handleWithdraw = async () => {
-    if (!address || !withdrawAmount) return;
-    try {
-      const url = await initiateSep24Withdraw(address, withdrawAmount);
-      window.open(url, "_blank", "width=600,height=800");
-      toast.success("Withdrawal flow opened");
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Withdrawal failed");
-    }
-  };
 
   if (!connected) {
     return (
@@ -106,43 +80,9 @@ export default function DashboardPage() {
       </div>
 
       {/* SEP-24 on/off ramp */}
-      {sep24Available && (
-        <div className="glass-card p-6 mb-8">
-          <h2 className="text-lg font-semibold mb-4">INR On/Off Ramp</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-chit-muted text-sm mb-1">Deposit INR → USDC</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  placeholder="Amount in INR"
-                  className="flex-1 px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
-                />
-                <button onClick={handleDeposit} disabled={!depositAmount} className="btn-primary">
-                  Deposit
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="block text-chit-muted text-sm mb-1">Withdraw USDC → INR</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="Amount in INR"
-                  className="flex-1 px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
-                />
-                <button onClick={handleWithdraw} disabled={!withdrawAmount} className="btn-secondary">
-                  Withdraw
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="mb-8">
+        <Sep24Ramp />
+      </div>
 
       {/* Groups */}
       <h2 className="text-xl font-semibold mb-4">Your Groups</h2>
