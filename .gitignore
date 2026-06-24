@@ -7,3 +7,4 @@ node_modules/
 soroban-sqlite*.db
 .DS_Store
 *.log
+*.tsbuildinfo
