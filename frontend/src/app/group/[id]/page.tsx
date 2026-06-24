@@ -6,7 +6,7 @@ import { useChitGroup } from "@/hooks/useChitGroup";
 import { useWallet } from "@/hooks/useWallet";
 import { ContributionFlow } from "@/components/ContributionFlow";
 import { ReputationBadge } from "@/components/ReputationBadge";
-import { BiddingPanel } from "@/components/BiddingPanel";
+import BiddingPanel from "@/components/BiddingPanel";
 import { formatUsdc, getStateColor, shortenAddress } from "@/lib/utils";
 import toast from "react-hot-toast";
 
@@ -116,8 +116,12 @@ export default function GroupDetailPage() {
 
       {groupInfo.state === "Bidding" && isMember && (
         <BiddingPanel
-          contributionAmount={groupInfo.contribution_amount}
-          currentCycle={groupInfo.current_cycle}
+          groupId={params.id as string}
+          cycle={groupInfo.current_cycle}
+          minReputation={groupInfo.min_reputation_for_bid}
+          hasCommitment={cycleState && address ? !!cycleState.bids[address] : false}
+          onBidCommitted={() => { fetchGroupInfo(); fetchCycleState(groupInfo.current_cycle); }}
+          onBidRevealed={() => { fetchGroupInfo(); fetchCycleState(groupInfo.current_cycle); }}
         />
       )}
 

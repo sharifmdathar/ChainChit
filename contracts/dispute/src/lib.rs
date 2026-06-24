@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, Env, Map, String, Symbol, Vec};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, Env, IntoVal, String, Symbol, Vec};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,8 +16,9 @@ pub enum DisputeStatus {
 }
 
 #[contracttype]
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum DisputeDecision {
+    Undecided,
     Dismiss,
     ReversePayout,
     ForceDefault,
@@ -34,7 +35,7 @@ pub struct DisputeRecord {
     pub status: DisputeStatus,
     pub votes_for: Vec<Address>,
     pub votes_against: Vec<Address>,
-    pub decision: Option<DisputeDecision>,
+    pub decision: DisputeDecision,
     pub resolved_at: Option<u64>,
 }
 
@@ -156,7 +157,7 @@ impl DisputeContract {
             status: DisputeStatus::Open,
             votes_for: Vec::new(&env),
             votes_against: Vec::new(&env),
-            decision: None,
+            decision: DisputeDecision::Undecided,
             resolved_at: None,
         };
 
@@ -208,7 +209,7 @@ impl DisputeContract {
 
         if in_favor {
             dispute.votes_for.push_back(arbitrator);
-            dispute.decision = Some(decision);
+            dispute.decision = decision;
         } else {
             dispute.votes_against.push_back(arbitrator);
         }
@@ -228,7 +229,7 @@ impl DisputeContract {
         } else if dispute.votes_against.len() >= required {
             dispute.status = DisputeStatus::Dismissed;
             dispute.resolved_at = Some(env.ledger().timestamp());
-            dispute.decision = Some(DisputeDecision::Dismiss);
+            dispute.decision = DisputeDecision::Dismiss;
         }
 
         env.storage()
@@ -267,7 +268,7 @@ impl DisputeContract {
         }
 
         dispute.status = DisputeStatus::Resolved;
-        dispute.decision = Some(decision);
+        dispute.decision = decision;
         dispute.resolved_at = Some(env.ledger().timestamp());
 
         Self::record_dispute_outcome(&env, &dispute);
@@ -396,22 +397,23 @@ impl DisputeContract {
         };
 
         let member_lost = match dispute.decision {
-            Some(DisputeDecision::Dismiss) => false,
-            Some(DisputeDecision::ReversePayout) => true,
-            Some(DisputeDecision::ForceDefault) => true,
-            Some(DisputeDecision::PartialRefund) => true,
-            None => false,
+            DisputeDecision::Dismiss => false,
+            DisputeDecision::ReversePayout => true,
+            DisputeDecision::ForceDefault => true,
+            DisputeDecision::PartialRefund => true,
+            DisputeDecision::Undecided => false,
         };
 
         let args = soroban_sdk::vec![
             env,
+            env.current_contract_address().to_val(),
             dispute.raiser.to_val(),
-            member_lost.to_val(),
+            member_lost.into_val(env),
         ];
-        env.invoke_contract(
+        env.invoke_contract::<()>(
             &reputation_addr,
-            &Symbol::short("record_dispute_outcome"),
-            &args,
+            &Symbol::new(env, "record_dispute_outcome"),
+            args,
         );
     }
 }
@@ -419,6 +421,15 @@ impl DisputeContract {
 #[cfg(test)]
 mod test {
     use super::*;
+    use soroban_sdk::testutils::Address as _;
+
+    #[contract]
+    pub struct MockReputationContract;
+
+    #[contractimpl]
+    impl MockReputationContract {
+        pub fn record_dispute_outcome(_env: Env, _caller: Address, _member: Address, _member_lost: bool) {}
+    }
 
     fn make_arbitrators(env: &Env, count: u32) -> Vec<Address> {
         let mut v = Vec::new(env);
@@ -431,9 +442,10 @@ mod test {
     #[test]
     fn test_initialize() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -444,12 +456,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(NotEnoughArbitrators)")]
+    #[should_panic(expected = "Error(Contract, #10)")]
     fn test_initialize_too_few_arbitrators() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 2);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -459,9 +472,10 @@ mod test {
     #[test]
     fn test_raise_dispute() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -484,9 +498,10 @@ mod test {
     #[test]
     fn test_auto_increment_dispute_id() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -505,12 +520,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(NotArbitrator)")]
+    #[should_panic(expected = "Error(Contract, #2)")]
     fn test_non_arbitrator_cannot_vote() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -530,9 +546,10 @@ mod test {
     #[test]
     fn test_dispute_resolves_on_threshold() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -561,15 +578,16 @@ mod test {
         client.cast_vote(&arb3, &id, &true, &DisputeDecision::ForceDefault);
         let d = client.get_dispute(&id);
         assert_eq!(d.status, DisputeStatus::Resolved);
-        assert_eq!(d.decision, Some(DisputeDecision::ForceDefault));
+        assert_eq!(d.decision, DisputeDecision::ForceDefault);
     }
 
     #[test]
     fn test_dispute_dismissed_on_counter_votes() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -596,12 +614,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(AlreadyVoted)")]
+    #[should_panic(expected = "Error(Contract, #3)")]
     fn test_double_vote_rejected() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -625,9 +644,10 @@ mod test {
     #[test]
     fn test_admin_resolve_dispute() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -644,16 +664,17 @@ mod test {
 
         let d = client.get_dispute(&id);
         assert_eq!(d.status, DisputeStatus::Resolved);
-        assert_eq!(d.decision, Some(DisputeDecision::ReversePayout));
+        assert_eq!(d.decision, DisputeDecision::ReversePayout);
     }
 
     #[test]
-    #[should_panic(expected = "Error(AlreadyResolved)")]
+    #[should_panic(expected = "Error(Contract, #6)")]
     fn test_resolve_already_resolved() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -677,9 +698,10 @@ mod test {
     #[test]
     fn test_add_arbitrator() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 3);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -695,9 +717,10 @@ mod test {
     #[test]
     fn test_add_duplicate_arbitrator_ignored() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 3);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -713,9 +736,10 @@ mod test {
     #[test]
     fn test_remove_arbitrator() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -729,12 +753,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(NotAdmin)")]
+    #[should_panic(expected = "Error(Contract, #1)")]
     fn test_add_arbitrator_non_admin() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -748,12 +773,13 @@ mod test {
     // ------------------- Unauthorized raise dispute -------------------
 
     #[test]
-    #[should_panic(expected = "Error(UnauthorizedCaller)")]
+    #[should_panic(expected = "Error(Contract, #8)")]
     fn test_unauthorized_raise_dispute() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -769,12 +795,13 @@ mod test {
     // ------------------- Invalid required_votes -------------------
 
     #[test]
-    #[should_panic(expected = "Error(InvalidDecision)")]
+    #[should_panic(expected = "Error(Contract, #9)")]
     fn test_initialize_required_votes_too_low() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -783,12 +810,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(InvalidDecision)")]
+    #[should_panic(expected = "Error(Contract, #9)")]
     fn test_initialize_required_votes_exceeds_arbitrators() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 3);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 
@@ -797,12 +825,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(DisputeNotFound)")]
+    #[should_panic(expected = "Error(Contract, #4)")]
     fn test_get_nonexistent_dispute() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let arbitrators = make_arbitrators(&env, 5);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(DisputeContract, ());
         let client = DisputeContractClient::new(&env, &contract_id);
 

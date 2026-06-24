@@ -20,7 +20,11 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: wasm32-unknown-unknown
+          targets: wasm32v1-none
+
+      - name: Install stellar-cli
+        run: |
+          cargo install --locked soroban-cli
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -35,10 +39,10 @@ jobs:
           restore-keys: contracts-${{ runner.os }}-cargo-
 
       - name: Build contracts
-        run: cargo build --target wasm32-unknown-unknown --release
+        run: stellar contract build
 
       - name: Check for warnings
-        run: cargo build --target wasm32-unknown-unknown --release 2>&1 | grep -i "warning" || true
+        run: stellar contract build 2>&1 | grep -i "warning" || true
 
   test-contracts:
     name: Test Soroban Contracts
@@ -48,8 +52,6 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
 
       - name: Cache Cargo
         uses: actions/cache@v4

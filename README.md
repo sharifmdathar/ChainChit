@@ -49,7 +49,7 @@ A chit fund is a rotating savings scheme where a group of members contribute a f
 
 ### Prerequisites
 
-- Rust 1.75+ with `wasm32-unknown-unknown` target
+- Rust 1.84+ with `wasm32v1-none` target
 - Node.js 20+
 - A Stellar wallet (Freighter recommended)
 
@@ -57,10 +57,10 @@ A chit fund is a rotating savings scheme where a group of members contribute a f
 
 ```bash
 # Add WASM target if needed
-rustup target add wasm32-unknown-unknown
+rustup target add wasm32v1-none
 
 # Build all contracts
-cargo build --target wasm32-unknown-unknown --release
+stellar contract build
 ```
 
 ### Run Tests

@@ -107,7 +107,7 @@ Pre-deployment checklist for ChainChit smart contracts and frontend.
 ## Pre-Deployment Verification
 
 - [ ] `cargo test` passes all contract tests
-- [ ] `cargo build --target wasm32-unknown-unknown --release` succeeds
+- [ ] `stellar contract build` succeeds
 - [ ] `cd frontend && npm run build` succeeds with zero errors
 - [ ] All contracts deployed to testnet and initialized
 - [ ] End-to-end flow tested: create group → join → pay → bid → reveal → payout

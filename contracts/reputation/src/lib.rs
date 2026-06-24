@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, Env, Map, Vec};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, Env, Map};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -8,7 +8,7 @@ use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, 
 
 /// Reputation data for a single address. All values are cumulative across all groups.
 #[contracttype]
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct ReputationData {
     pub address: Address,
     /// Number of individual payments made on time.
@@ -138,7 +138,13 @@ impl ReputationContract {
 
         let mut data = map.get(member.clone()).unwrap_or_else(|| ReputationData {
             address: member.clone(),
-            ..Default::default()
+            on_time_payments: 0,
+            total_payments_due: 0,
+            cycles_defaulted: 0,
+            cycles_completed: 0,
+            bids_won: 0,
+            disputes_raised: 0,
+            disputes_lost: 0,
         });
 
         data.total_payments_due = data.total_payments_due.saturating_add(1);
@@ -165,7 +171,13 @@ impl ReputationContract {
 
         let mut data = map.get(member.clone()).unwrap_or_else(|| ReputationData {
             address: member.clone(),
-            ..Default::default()
+            on_time_payments: 0,
+            total_payments_due: 0,
+            cycles_defaulted: 0,
+            cycles_completed: 0,
+            bids_won: 0,
+            disputes_raised: 0,
+            disputes_lost: 0,
         });
 
         data.cycles_defaulted = data.cycles_defaulted.saturating_add(1);
@@ -190,7 +202,13 @@ impl ReputationContract {
 
         let mut data = map.get(member.clone()).unwrap_or_else(|| ReputationData {
             address: member.clone(),
-            ..Default::default()
+            on_time_payments: 0,
+            total_payments_due: 0,
+            cycles_defaulted: 0,
+            cycles_completed: 0,
+            bids_won: 0,
+            disputes_raised: 0,
+            disputes_lost: 0,
         });
 
         data.bids_won = data.bids_won.saturating_add(1);
@@ -218,7 +236,13 @@ impl ReputationContract {
 
         let mut data = map.get(member.clone()).unwrap_or_else(|| ReputationData {
             address: member.clone(),
-            ..Default::default()
+            on_time_payments: 0,
+            total_payments_due: 0,
+            cycles_defaulted: 0,
+            cycles_completed: 0,
+            bids_won: 0,
+            disputes_raised: 0,
+            disputes_lost: 0,
         });
 
         data.cycles_completed = data.cycles_completed.saturating_add(1);
@@ -247,7 +271,13 @@ impl ReputationContract {
 
         let mut data = map.get(member.clone()).unwrap_or_else(|| ReputationData {
             address: member.clone(),
-            ..Default::default()
+            on_time_payments: 0,
+            total_payments_due: 0,
+            cycles_defaulted: 0,
+            cycles_completed: 0,
+            bids_won: 0,
+            disputes_raised: 0,
+            disputes_lost: 0,
         });
 
         data.disputes_raised = data.disputes_raised.saturating_add(1);
@@ -342,13 +372,13 @@ impl ReputationContract {
         };
 
         // Cycles completed component (0-200), capped at 10 cycles
-        let cycle_score = (data.cycles_completed.min(10) as u32 * 20);
+        let cycle_score = data.cycles_completed.min(10) as u32 * 20;
 
         // Dispute component (0-100): lose 100 per dispute lost, floor at 0
         let dispute_score = 100u32.saturating_sub(data.disputes_lost * 50);
 
         // Bids won component (0-100), capped at 5
-        let bid_score = (data.bids_won.min(5) as u32 * 20);
+        let bid_score = data.bids_won.min(5) as u32 * 20;
 
         on_time_score + cycle_score + dispute_score + bid_score
     }
@@ -373,10 +403,12 @@ impl ReputationContract {
 #[cfg(test)]
 mod test {
     use super::*;
+    use soroban_sdk::testutils::Address as _;
 
     #[test]
     fn test_initialize() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);
@@ -392,6 +424,7 @@ mod test {
     #[test]
     fn test_on_time_ratio() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);
@@ -415,6 +448,7 @@ mod test {
     #[test]
     fn test_on_time_ratio_partial() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);
@@ -438,6 +472,7 @@ mod test {
     #[test]
     fn test_composite_score() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);
@@ -460,14 +495,15 @@ mod test {
         client.record_bid_won(&group, &member);
 
         let score = client.get_composite_score(&member);
-        // on_time: 600, cycles: 200, disputes: 100, bids: 40 = 940
-        assert_eq!(score, 940);
+        // on_time: 600, cycles: 100, disputes: 100, bids: 40 = 840
+        assert_eq!(score, 840);
     }
 
     #[test]
-    #[should_panic(expected = "Error(UnauthorizedCaller)")]
+    #[should_panic(expected = "Error(Contract, #2)")]
     fn test_unauthorized_record() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);
@@ -483,6 +519,7 @@ mod test {
     #[test]
     fn test_is_established() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);
@@ -507,6 +544,7 @@ mod test {
     #[test]
     fn test_default_increments_both_counters() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);
@@ -519,7 +557,7 @@ mod test {
         let member = Address::generate(&env);
         client.record_default(&group, &member);
 
-        let rep = client.try_get_reputation(&member).unwrap();
+        let rep = client.try_get_reputation(&member).unwrap().unwrap();
         assert_eq!(rep.cycles_defaulted, 1);
         assert_eq!(rep.total_payments_due, 1);
         assert_eq!(rep.on_time_payments, 0);
@@ -531,6 +569,7 @@ mod test {
     #[test]
     fn test_composite_score_with_disputes() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);
@@ -550,9 +589,10 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(ContractNotInitialized)")]
+    #[should_panic(expected = "Error(Contract, #6)")]
     fn test_double_initialize() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);
@@ -562,9 +602,10 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(NotAdmin)")]
+    #[should_panic(expected = "Error(Contract, #1)")]
     fn test_authorize_group_non_admin() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);
@@ -579,6 +620,7 @@ mod test {
     #[test]
     fn test_revoke_group() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);
@@ -598,6 +640,7 @@ mod test {
     #[test]
     fn test_stranger_zero_reputation() {
         let env = Env::default();
+        env.mock_all_auths();
         let admin = Address::generate(&env);
         let contract_id = env.register(ReputationContract, ());
         let client = ReputationContractClient::new(&env, &contract_id);

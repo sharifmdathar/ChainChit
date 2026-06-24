@@ -30,7 +30,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     address: null,
     connected: false,
     connecting: false,
-    network: getNetwork() as "PUBLIC" | "TESTNET" | "FUTURENET",
+    network: getNetwork() as unknown as "PUBLIC" | "TESTNET" | "FUTURENET",
   });
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, connecting: true }));
     try {
       const address = await connectWallet(walletId);
-      setState({ address, connected: true, connecting: false, network: getNetwork() as "PUBLIC" | "TESTNET" | "FUTURENET" });
+      setState({ address, connected: true, connecting: false, network: getNetwork() as unknown as "PUBLIC" | "TESTNET" | "FUTURENET" });
     } catch (error) {
       setState((prev) => ({ ...prev, connecting: false }));
       throw error;
@@ -54,7 +54,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(() => {
     disconnectWallet();
-    setState({ address: null, connected: false, connecting: false, network: getNetwork() as "PUBLIC" | "TESTNET" | "FUTURENET" });
+    setState({ address: null, connected: false, connecting: false, network: getNetwork() as unknown as "PUBLIC" | "TESTNET" | "FUTURENET" });
   }, []);
 
   return (

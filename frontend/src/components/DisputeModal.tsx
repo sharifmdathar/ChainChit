@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { castVote } from "@/lib/contracts";
 import { shortenAddress } from "@/lib/utils";
-import type { DisputeRecord, DisputeStatus } from "@/types";
+import type { DisputeRecord, DisputeStatus, DisputeDecision } from "@/types";
 import toast from "react-hot-toast";
 
 interface DisputeModalProps {
@@ -17,6 +17,7 @@ interface DisputeModalProps {
 export default function DisputeModal({ dispute, onClose, isArbitrator, onVoted }: DisputeModalProps) {
   const { connected, address } = useWallet();
   const [loading, setLoading] = useState(false);
+  const [selectedDecision, setSelectedDecision] = useState<DisputeDecision>("ForceDefault");
 
   const hasVoted = address ? dispute.votes_against.includes(address) || dispute.votes_for.includes(address) : false;
   const statusColor = getStatusColor(dispute.status);
@@ -29,7 +30,7 @@ export default function DisputeModal({ dispute, onClose, isArbitrator, onVoted }
 
     setLoading(true);
     try {
-      await castVote(dispute.id, support);
+      await castVote(dispute.id, support, support ? selectedDecision : "Dismiss");
       toast.success(support ? "Voted in favor" : "Voted against");
       onVoted?.();
       onClose();
@@ -38,7 +39,7 @@ export default function DisputeModal({ dispute, onClose, isArbitrator, onVoted }
     } finally {
       setLoading(false);
     }
-  }, [connected, address, dispute.id, onVoted, onClose]);
+  }, [connected, address, dispute.id, selectedDecision, onVoted, onClose]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -103,21 +104,36 @@ export default function DisputeModal({ dispute, onClose, isArbitrator, onVoted }
 
         {/* Voting buttons – only for arbitrators on open disputes */}
         {dispute.status === "Voting" && isArbitrator && !hasVoted && (
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <button
-              onClick={() => handleVote(true)}
-              disabled={loading}
-              className="btn-primary bg-chit-success hover:bg-chit-success/80"
-            >
-              {loading ? "..." : "Vote For"}
-            </button>
-            <button
-              onClick={() => handleVote(false)}
-              disabled={loading}
-              className="btn-danger"
-            >
-              {loading ? "..." : "Vote Against"}
-            </button>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1">
+              <label className="text-xs text-chit-muted">Decision Action (if voting to resolve)</label>
+              <select
+                value={selectedDecision}
+                onChange={(e) => setSelectedDecision(e.target.value as DisputeDecision)}
+                className="w-full bg-chit-bg border border-chit-border rounded-lg p-2 text-sm text-chit-text focus:outline-none focus:border-stellar-500"
+              >
+                <option value="ForceDefault">Force Default</option>
+                <option value="ReversePayout">Reverse Payout</option>
+                <option value="PartialRefund">Partial Refund</option>
+                <option value="Dismiss">Dismiss</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleVote(true)}
+                disabled={loading}
+                className="btn-primary bg-chit-success hover:bg-chit-success/80"
+              >
+                {loading ? "..." : "Vote For"}
+              </button>
+              <button
+                onClick={() => handleVote(false)}
+                disabled={loading}
+                className="btn-danger"
+              >
+                {loading ? "..." : "Vote Against"}
+              </button>
+            </div>
           </div>
         )}
 

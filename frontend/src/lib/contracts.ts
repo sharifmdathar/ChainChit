@@ -265,17 +265,21 @@ export async function castVote(
 // Parsers (Soroban ScVal → TypeScript types)
 // ===========================================================================
 
+import { xdr } from "@stellar/stellar-sdk";
+
+function getMapValue(map: xdr.ScMapEntry[], key: string): xdr.ScVal | undefined {
+  const entry = map.find(
+    (e) =>
+      e.key().switch().name === "scvSymbol" &&
+      e.key().sym().toString() === key
+  );
+  return entry?.val();
+}
+
 function parseGroupInfo(val: xdr.ScVal): GroupInfo {
   const map = val.map();
   if (!map) throw new Error("Expected map for GroupInfo");
-  const get = (key: string) => {
-    const entry = map.find(
-      (e) =>
-        e.key.switch().name === "scvSymbol" &&
-        e.key.sym().toString() === key
-    );
-    return entry?.val;
-  };
+  const get = (key: string) => getMapValue(map, key);
 
   return {
     admin: scValToAddress(get("admin")!),
@@ -293,26 +297,17 @@ function parseGroupInfo(val: xdr.ScVal): GroupInfo {
   };
 }
 
-import { xdr } from "@stellar/stellar-sdk";
-
 function parseCycleState(val: xdr.ScVal): CycleState {
   const map = val.map();
   if (!map) throw new Error("Expected map for CycleState");
-  const get = (key: string) => {
-    const entry = map.find(
-      (e) =>
-        e.key.switch().name === "scvSymbol" &&
-        e.key.sym().toString() === key
-    );
-    return entry?.val;
-  };
+  const get = (key: string) => getMapValue(map, key);
 
   const paymentsVal = get("payments");
   const payments: Record<string, MemberStatus> = {};
   if (paymentsVal?.map()) {
     for (const entry of paymentsVal.map()!) {
-      const addr = scValToAddress(entry.key);
-      const status = scValToString(entry.val) as MemberStatus;
+      const addr = scValToAddress(entry.key());
+      const status = scValToString(entry.val()) as MemberStatus;
       payments[addr] = status;
     }
   }
@@ -321,8 +316,8 @@ function parseCycleState(val: xdr.ScVal): CycleState {
   const bids: Record<string, BidRecord> = {};
   if (bidsVal?.map()) {
     for (const entry of bidsVal.map()!) {
-      const addr = scValToAddress(entry.key);
-      bids[addr] = parseBidRecord(entry.val);
+      const addr = scValToAddress(entry.key());
+      bids[addr] = parseBidRecord(entry.val());
     }
   }
 
@@ -343,14 +338,7 @@ function parseCycleState(val: xdr.ScVal): CycleState {
 function parseBidRecord(val: xdr.ScVal): BidRecord {
   const map = val.map();
   if (!map) throw new Error("Expected map for BidRecord");
-  const get = (key: string) => {
-    const entry = map.find(
-      (e) =>
-        e.key.switch().name === "scvSymbol" &&
-        e.key.sym().toString() === key
-    );
-    return entry?.val;
-  };
+  const get = (key: string) => getMapValue(map, key);
 
   return {
     commitment: scValToVecU8(get("commitment")!),
@@ -362,14 +350,7 @@ function parseBidRecord(val: xdr.ScVal): BidRecord {
 function parseReputationData(val: xdr.ScVal, address: string): ReputationData {
   const map = val.map();
   if (!map) throw new Error("Expected map for ReputationData");
-  const get = (key: string) => {
-    const entry = map.find(
-      (e) =>
-        e.key.switch().name === "scvSymbol" &&
-        e.key.sym().toString() === key
-    );
-    return entry?.val;
-  };
+  const get = (key: string) => getMapValue(map, key);
 
   return {
     address,
@@ -386,14 +367,7 @@ function parseReputationData(val: xdr.ScVal, address: string): ReputationData {
 function parseDisputeRecord(val: xdr.ScVal): DisputeRecord {
   const map = val.map();
   if (!map) throw new Error("Expected map for DisputeRecord");
-  const get = (key: string) => {
-    const entry = map.find(
-      (e) =>
-        e.key.switch().name === "scvSymbol" &&
-        e.key.sym().toString() === key
-    );
-    return entry?.val;
-  };
+  const get = (key: string) => getMapValue(map, key);
 
   const decisionVal = get("decision");
   let decision: DisputeDecision | null = null;

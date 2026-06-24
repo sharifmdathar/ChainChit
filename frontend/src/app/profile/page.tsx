@@ -1,14 +1,22 @@
 "use client";
 
+import { useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { useReputation } from "@/hooks/useReputation";
 import { shortenAddress, getReputationColor, getReputationLabel, basisPointsToPercent } from "@/lib/utils";
 import AttestationFlow from "@/components/AttestationFlow";
-import ReputationBadge from "@/components/ReputationBadge";
+import { ReputationBadge } from "@/components/ReputationBadge";
 
 export default function ProfilePage() {
   const { connected, address } = useWallet();
-  const { reputation, score, loading } = useReputation(address ?? "");
+  const { reputation, compositeScore, loading, fetchReputation, fetchScore } = useReputation();
+
+  useEffect(() => {
+    if (address) {
+      fetchReputation(address);
+      fetchScore(address);
+    }
+  }, [address, fetchReputation, fetchScore]);
 
   if (!connected || !address) {
     return (
@@ -43,9 +51,9 @@ export default function ProfilePage() {
         ) : (
           <>
             <div className="flex items-center gap-3">
-              <ReputationBadge score={score ?? 0} />
-              <span className={`text-sm ${getReputationColor(score ?? 0)}`}>
-                {getReputationLabel(score ?? 0)}
+              <ReputationBadge score={compositeScore ?? 0} />
+              <span className={`text-sm ${getReputationColor(compositeScore ?? 0)}`}>
+                {getReputationLabel(compositeScore ?? 0)}
               </span>
             </div>
 
@@ -65,7 +73,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="p-3 rounded-lg bg-chit-bg">
                   <p className="text-chit-muted text-xs">Composite Score</p>
-                  <p className="text-chit-text font-bold">{score ?? 0}</p>
+                  <p className="text-chit-text font-bold">{compositeScore ?? 0}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-chit-bg">
                   <p className="text-chit-muted text-xs">Payments Made</p>

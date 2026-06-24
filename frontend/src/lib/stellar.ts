@@ -3,8 +3,10 @@ import {
   FREIGHTER_ID,
   XBULL_ID,
   LOBSTR_ID,
-  Network,
   WalletNetwork,
+  FreighterModule,
+  xBullModule,
+  LobstrModule,
 } from "@creit.tech/stellar-wallets-kit";
 import { Address, Keypair, TransactionBuilder, SorobanRpc, Contract, xdr } from "@stellar/stellar-sdk";
 
@@ -13,8 +15,9 @@ let kit: StellarWalletsKit | null = null;
 function getKit(): StellarWalletsKit {
   if (!kit) {
     kit = new StellarWalletsKit({
-      network: Network.PUBLIC,
+      network: getNetwork(),
       selectedWalletId: FREIGHTER_ID,
+      modules: [new FreighterModule(), new xBullModule(), new LobstrModule()],
     });
   }
   return kit;
@@ -41,11 +44,7 @@ export async function connectWallet(walletId: string = FREIGHTER_ID): Promise<st
   const k = getKit();
   k.setWallet(walletId);
 
-  await k.openWallet({
-    onWalletSelected: () => {},
-  });
-
-  const { address } = await k.getPublicKey();
+  const { address } = await k.getAddress();
   if (!address) throw new Error("No address returned from wallet");
   return address;
 }
@@ -57,7 +56,7 @@ export async function disconnectWallet(): Promise<void> {
 export async function getPublicKey(): Promise<string | null> {
   try {
     const k = getKit();
-    const { address } = await k.getPublicKey();
+    const { address } = await k.getAddress();
     return address || null;
   } catch {
     return null;
@@ -137,27 +136,14 @@ export async function invokeContract(
     throw new Error(`Simulation error: ${simResponse.error}`);
   }
 
-  if (simResponse.results && simResponse.results.length > 0) {
-    const auth = simResponse.results[0].auth;
-    if (auth && auth.length > 0) {
-      const authEntries = auth.map((a: string) =>
-        xdr.SorobanAuthorizationEntry.fromXDR(a, "base64")
-      );
-      tx.setSorobanAuth(authEntries);
-    }
-  }
-
-  const txWithAuth = TransactionBuilder.fromXDR(
-    tx.toXDR(),
-    networkPassphrase
-  );
+  const assembledTx = SorobanRpc.assembleTransaction(tx, simResponse).build();
 
   if (!sign) {
-    return simResponse.results?.[0]?.retval;
+    return simResponse.result?.retval;
   }
 
-  await signAndSendTransaction((txWithAuth as any).toXDR());
-  return simResponse.results?.[0]?.retval;
+  await signAndSendTransaction(assembledTx.toXDR());
+  return simResponse.result?.retval;
 }
 
 export function addressToScVal(address: string): xdr.ScVal {
@@ -169,7 +155,7 @@ export function u64ToScVal(value: number): xdr.ScVal {
 }
 
 export function u32ToScVal(value: number): xdr.ScVal {
-  return xdr.ScVal.scvU32(new xdr.Uint32(value));
+  return xdr.ScVal.scvU32(value);
 }
 
 export function boolToScVal(value: boolean): xdr.ScVal {
@@ -181,7 +167,7 @@ export function stringToScVal(value: string): xdr.ScVal {
 }
 
 export function vecU8ToScVal(bytes: number[]): xdr.ScVal {
-  const vec = bytes.map((b) => xdr.ScVal.scvU32(new xdr.Uint32(b)));
+  const vec = bytes.map((b) => xdr.ScVal.scvU32(b));
   return xdr.ScVal.scvVec(vec);
 }
 

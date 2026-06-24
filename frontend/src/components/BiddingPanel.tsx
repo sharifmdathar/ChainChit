@@ -54,10 +54,7 @@ export default function BiddingPanel({
     try {
       const commitment = await computeCommitment(amount, nonce);
 
-      await commitBid({
-        groupId,
-        commitment,
-      });
+      await commitBid(commitment);
 
       setPhase("committed");
       toast.success("Bid committed! Remember your bid amount — you must reveal it later.");
@@ -82,11 +79,7 @@ export default function BiddingPanel({
 
     setRevealing(true);
     try {
-      await revealBid({
-        groupId,
-        amount: savedAmount,
-        nonce: savedNonce,
-      });
+      await revealBid(savedAmount, savedNonce);
 
       setPhase("revealed");
       toast.success("Bid revealed! Waiting for payout execution.");

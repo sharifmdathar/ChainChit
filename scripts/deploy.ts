@@ -8,7 +8,7 @@
  * Requires:
  *   - SOROBAN_SECRET_KEY env var (admin secret key)
  *   - stellar-cli installed (soroban-cli)
- *   - cargo build --target wasm32-unknown-unknown --release already run
+ *   - stellar contract build already run
  */
 
 import { execSync } from "child_process";
@@ -48,18 +48,18 @@ function buildWasm(contractDir: string): string {
   const wasmPath = join(
     ROOT_DIR,
     "target",
-    "wasm32-unknown-unknown",
+    "wasm32v1-none",
     "release",
     `${contractDir.replace(/_/g, "_")}.wasm`
   );
 
   // Find the actual wasm file
-  const findCmd = `find ${join(ROOT_DIR, "target", "wasm32-unknown-unknown", "release")} -name "${contractDir}*.wasm" -type f 2>/dev/null | head -1`;
+  const findCmd = `find ${join(ROOT_DIR, "target", "wasm32v1-none", "release")} -name "${contractDir}*.wasm" -type f 2>/dev/null | head -1`;
   const found = run(findCmd);
   if (found) return found;
 
   console.log(`Building ${contractDir}...`);
-  run(`cargo build --target wasm32-unknown-unknown --release --package ${contractDir} 2>&1`);
+  run(`stellar contract build --package ${contractDir} 2>&1`);
   const afterBuild = run(findCmd);
   if (!afterBuild) {
     throw new Error(`WASM not found for ${contractDir}`);

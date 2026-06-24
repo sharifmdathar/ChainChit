@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Rust 1.75+ with `wasm32-unknown-unknown` target
+- Rust 1.84+ with `wasm32v1-none` target
 - Node.js 20+
 - [soroban-cli](https://github.com/stellar/soroban-cli) installed
 - A Stellar account with XLM for fees (testnet or mainnet)
@@ -11,11 +11,11 @@
 ## Step 1: Build Contracts
 
 ```bash
-rustup target add wasm32-unknown-unknown
-cargo build --target wasm32-unknown-unknown --release
+rustup target add wasm32v1-none
+stellar contract build
 ```
 
-WASM outputs are in `target/wasm32-unknown-unknown/release/`.
+WASM outputs are in `target/wasm32v1-none/release/`.
 
 ## Step 2: Run Tests
 
@@ -58,7 +58,7 @@ The script:
 ```bash
 # Deploy Reputation
 soroban contract deploy \
-  --wasm target/wasm32-unknown-unknown/release/reputation.wasm \
+  --wasm target/wasm32v1-none/release/reputation.wasm \
   --source <SECRET> \
   --network-passphrase "Test SDF Network ; September 2015" \
   --rpc-url https://soroban-testnet.stellar.org

@@ -1,8 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, Address, Env, Map, String, Symbol,
-    Vec,
+    contract, contracterror, contractimpl, contracttype, Address, Env, IntoVal, Map, String, Symbol,
+    Vec, symbol_short,
 };
 
 // ---------------------------------------------------------------------------
@@ -21,7 +21,7 @@ pub enum GroupState {
 }
 
 #[contracttype]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MemberStatus {
     Pending,
     Paid,
@@ -32,7 +32,7 @@ pub enum MemberStatus {
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct BidRecord {
-    pub commitment: Vec<u8>,
+    pub commitment: Vec<u32>,
     pub revealed: bool,
     pub amount: u64,
 }
@@ -175,7 +175,7 @@ impl ChitGroupContract {
     pub fn join_group(env: Env, caller: Address) -> Result<(), Error> {
         caller.require_auth();
 
-        let mut info: GroupInfo = env
+        let info: GroupInfo = env
             .storage()
             .instance()
             .get(&DataKey::GroupInfo)
@@ -431,7 +431,7 @@ impl ChitGroupContract {
 
     /// Commit a bid hash during the Bidding phase.
     /// commitment = sha256(bid_amount_le_bytes || nonce_le_bytes)
-    pub fn commit_bid(env: Env, caller: Address, commitment: Vec<u8>) -> Result<(), Error> {
+    pub fn commit_bid(env: Env, caller: Address, commitment: Vec<u32>) -> Result<(), Error> {
         caller.require_auth();
 
         let info: GroupInfo = env
@@ -641,13 +641,13 @@ impl ChitGroupContract {
         let args = soroban_sdk::vec![
             &env,
             caller.to_val(),
-            (info.current_cycle as u64).to_val(),
+            (info.current_cycle as u64).into_val(&env),
             reason.to_val(),
         ];
-        env.invoke_contract(
+        env.invoke_contract::<u64>(
             &info.dispute_contract,
-            &Symbol::short("raise_dispute"),
-            &args,
+            &Symbol::new(&env, "raise_dispute"),
+            args,
         );
 
         Ok(())
@@ -809,31 +809,29 @@ impl ChitGroupContract {
             env,
             from.to_val(),
             to.to_val(),
-            (amount as i128).to_val(),
+            (amount as i128).into_val(env),
         ];
-        env.invoke_contract(token, &Symbol::short("transfer"), &args);
+        env.invoke_contract::<()>(token, &symbol_short!("transfer"), args);
         Ok(())
     }
 
     fn check_attestation(env: &Env, identity_contract: &Address, caller: &Address) -> Result<u32, Error> {
         let args = soroban_sdk::vec![env, caller.to_val()];
-        let result = env.invoke_contract(
+        let score: u32 = env.invoke_contract(
             identity_contract,
-            &Symbol::short("get_attestation_score"),
-            &args,
+            &Symbol::new(env, "get_attestation_score"),
+            args,
         );
-        let score: u32 = result.try_into().unwrap_or(0);
         Ok(score)
     }
 
     fn get_reputation_ratio(env: &Env, reputation_contract: &Address, caller: &Address) -> u32 {
         let args = soroban_sdk::vec![env, caller.to_val()];
-        let result = env.invoke_contract(
+        env.invoke_contract(
             reputation_contract,
-            &Symbol::short("get_on_time_ratio"),
-            &args,
-        );
-        result.try_into().unwrap_or(0)
+            &Symbol::new(env, "get_on_time_ratio"),
+            args,
+        )
     }
 
     fn call_reputation_record_payment(
@@ -845,12 +843,12 @@ impl ChitGroupContract {
         let args = soroban_sdk::vec![
             env,
             caller.to_val(),
-            on_time.to_val(),
+            on_time.into_val(env),
         ];
-        env.invoke_contract(
+        env.invoke_contract::<()>(
             reputation_contract,
-            &Symbol::short("record_payment"),
-            &args,
+            &Symbol::new(env, "record_payment"),
+            args,
         );
     }
 
@@ -860,10 +858,10 @@ impl ChitGroupContract {
         caller: &Address,
     ) {
         let args = soroban_sdk::vec![env, caller.to_val()];
-        env.invoke_contract(
+        env.invoke_contract::<()>(
             reputation_contract,
-            &Symbol::short("record_default"),
-            &args,
+            &Symbol::new(env, "record_default"),
+            args,
         );
     }
 
@@ -873,10 +871,10 @@ impl ChitGroupContract {
         caller: &Address,
     ) {
         let args = soroban_sdk::vec![env, caller.to_val()];
-        env.invoke_contract(
+        env.invoke_contract::<()>(
             reputation_contract,
-            &Symbol::short("record_bid_won"),
-            &args,
+            &Symbol::new(env, "record_bid_won"),
+            args,
         );
     }
 
@@ -886,32 +884,38 @@ impl ChitGroupContract {
         caller: &Address,
     ) {
         let args = soroban_sdk::vec![env, caller.to_val()];
-        env.invoke_contract(
+        env.invoke_contract::<()>(
             reputation_contract,
-            &Symbol::short("record_group_cycle_completed"),
-            &args,
+            &Symbol::new(env, "record_group_cycle_completed"),
+            args,
         );
     }
 
-    fn compute_commitment(env: &Env, amount: u64, nonce: u64) -> Vec<u8> {
-        let mut data = Vec::new(env);
-        data.push_back((amount >> 0) as u8);
-        data.push_back((amount >> 8) as u8);
-        data.push_back((amount >> 16) as u8);
-        data.push_back((amount >> 24) as u8);
-        data.push_back((amount >> 32) as u8);
-        data.push_back((amount >> 40) as u8);
-        data.push_back((amount >> 48) as u8);
-        data.push_back((amount >> 56) as u8);
-        data.push_back((nonce >> 0) as u8);
-        data.push_back((nonce >> 8) as u8);
-        data.push_back((nonce >> 16) as u8);
-        data.push_back((nonce >> 24) as u8);
-        data.push_back((nonce >> 32) as u8);
-        data.push_back((nonce >> 40) as u8);
-        data.push_back((nonce >> 48) as u8);
-        data.push_back((nonce >> 56) as u8);
-        env.crypto().sha256(&data).to_bytes()
+    fn compute_commitment(env: &Env, amount: u64, nonce: u64) -> Vec<u32> {
+        let mut bytes = soroban_sdk::Bytes::new(env);
+        bytes.push_back(((amount >> 0) & 0xFF) as u8);
+        bytes.push_back(((amount >> 8) & 0xFF) as u8);
+        bytes.push_back(((amount >> 16) & 0xFF) as u8);
+        bytes.push_back(((amount >> 24) & 0xFF) as u8);
+        bytes.push_back(((amount >> 32) & 0xFF) as u8);
+        bytes.push_back(((amount >> 40) & 0xFF) as u8);
+        bytes.push_back(((amount >> 48) & 0xFF) as u8);
+        bytes.push_back(((amount >> 56) & 0xFF) as u8);
+        bytes.push_back(((nonce >> 0) & 0xFF) as u8);
+        bytes.push_back(((nonce >> 8) & 0xFF) as u8);
+        bytes.push_back(((nonce >> 16) & 0xFF) as u8);
+        bytes.push_back(((nonce >> 24) & 0xFF) as u8);
+        bytes.push_back(((nonce >> 32) & 0xFF) as u8);
+        bytes.push_back(((nonce >> 40) & 0xFF) as u8);
+        bytes.push_back(((nonce >> 48) & 0xFF) as u8);
+        bytes.push_back(((nonce >> 56) & 0xFF) as u8);
+        let hash = env.crypto().sha256(&bytes);
+        let hash_bytes = soroban_sdk::BytesN::<32>::try_from(hash).unwrap();
+        let mut result = Vec::new(env);
+        for i in 0..32u32 {
+            result.push_back(hash_bytes.get(i).unwrap() as u32);
+        }
+        result
     }
 }
 
@@ -934,16 +938,17 @@ mod test {
         (admin, token, reputation, identity, dispute)
     }
 
-    fn init_contract(
-        env: &Env,
+    fn init_contract<'a>(
+        env: &'a Env,
         admin: &Address,
         token: &Address,
         reputation: &Address,
         identity: &Address,
         dispute: &Address,
-    ) -> (Address, ChitGroupContractClient) {
+    ) -> (Address, ChitGroupContractClient<'a>) {
         let contract_id = env.register(ChitGroupContract, ());
         let client = ChitGroupContractClient::new(env, &contract_id);
+        env.mock_all_auths();
         client.initialize(
             admin, token, reputation, identity, dispute,
             &1000_u64, &5_u32, &5_u32, &0_u32, &0_u32,
@@ -969,7 +974,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(ContractNotRegistered)")]
+    #[should_panic(expected = "Error(Contract, #20)")]
     fn test_double_initialize() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
@@ -981,12 +986,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(InvalidAmount)")]
+    #[should_panic(expected = "Error(Contract, #19)")]
     fn test_initialize_zero_contribution() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
         let contract_id = env.register(ChitGroupContract, ());
         let client = ChitGroupContractClient::new(&env, &contract_id);
+        env.mock_all_auths();
         client.initialize(
             &admin, &token, &reputation, &identity, &dispute,
             &0_u64, &5_u32, &5_u32, &0_u32, &0_u32,
@@ -994,12 +1000,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(InvalidAmount)")]
+    #[should_panic(expected = "Error(Contract, #19)")]
     fn test_initialize_insufficient_members() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
         let contract_id = env.register(ChitGroupContract, ());
         let client = ChitGroupContractClient::new(&env, &contract_id);
+        env.mock_all_auths();
         client.initialize(
             &admin, &token, &reputation, &identity, &dispute,
             &1000_u64, &1_u32, &5_u32, &0_u32, &0_u32,
@@ -1007,12 +1014,13 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(InvalidAmount)")]
+    #[should_panic(expected = "Error(Contract, #19)")]
     fn test_initialize_insufficient_cycles() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
         let contract_id = env.register(ChitGroupContract, ());
         let client = ChitGroupContractClient::new(&env, &contract_id);
+        env.mock_all_auths();
         client.initialize(
             &admin, &token, &reputation, &identity, &dispute,
             &1000_u64, &5_u32, &1_u32, &0_u32, &0_u32,
@@ -1022,19 +1030,20 @@ mod test {
     // ------------------- Group formation tests -------------------
 
     #[test]
-    #[should_panic(expected = "Error(NotForming)")]
+    #[should_panic(expected = "Error(Contract, #14)")]
     fn test_join_wrong_state() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
-        let (_, client) = init_contract(&env, &admin, &token, &reputation, &identity, &dispute);
+        let (contract_id, client) = init_contract(&env, &admin, &token, &reputation, &identity, &dispute);
 
         // Manually corrupt state to Collecting — join should fail
-        // This requires us to test after start_collection which needs full member list
-        // We test the state guard indirectly
+        env.as_contract(&contract_id, || {
+            let mut info: GroupInfo = env.storage().instance().get(&DataKey::GroupInfo).unwrap();
+            info.state = GroupState::Collecting;
+            env.storage().instance().set(&DataKey::GroupInfo, &info);
+        });
+
         let caller = Address::generate(&env);
-        // Group is in Forming, which should allow join
-        // But cross-contract attestation call will fail in unit test
-        // So we verify state transition rejection conceptually
         client.join_group(&caller);
     }
 
@@ -1084,7 +1093,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(NotAdmin)")]
+    #[should_panic(expected = "Error(Contract, #1)")]
     fn test_pause_non_admin() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
@@ -1107,7 +1116,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(InvalidState)")]
+    #[should_panic(expected = "Error(Contract, #2)")]
     fn test_unpause_not_paused() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
@@ -1118,7 +1127,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(InvalidState)")]
+    #[should_panic(expected = "Error(Contract, #2)")]
     fn test_unpause_invalid_resume_state() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
@@ -1147,7 +1156,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(NotAdmin)")]
+    #[should_panic(expected = "Error(Contract, #1)")]
     fn test_update_contracts_non_admin() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
@@ -1161,7 +1170,7 @@ mod test {
     // ------------------- State transition violation tests -------------------
 
     #[test]
-    #[should_panic(expected = "Error(NotPayout)")]
+    #[should_panic(expected = "Error(Contract, #17)")]
     fn test_advance_cycle_wrong_state() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
@@ -1172,7 +1181,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(NotCollecting)")]
+    #[should_panic(expected = "Error(Contract, #15)")]
     fn test_pay_contribution_wrong_state() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
@@ -1183,7 +1192,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(NotBidding)")]
+    #[should_panic(expected = "Error(Contract, #16)")]
     fn test_commit_bid_wrong_state() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
@@ -1194,7 +1203,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(NotBidding)")]
+    #[should_panic(expected = "Error(Contract, #16)")]
     fn test_reveal_bid_wrong_state() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
@@ -1204,7 +1213,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Error(NotBidding)")]
+    #[should_panic(expected = "Error(Contract, #16)")]
     fn test_execute_payout_wrong_state() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
