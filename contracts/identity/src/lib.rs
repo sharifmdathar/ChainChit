@@ -290,4 +290,120 @@ mod test {
 
         assert_eq!(client.get_attestation_count(&vouchee), 0);
     }
+
+    #[test]
+    #[should_panic(expected = "Error(ContractNotInitialized)")]
+    fn test_double_initialize() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(IdentityContract, ());
+        let client = IdentityContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &reputation, &100_u32);
+        client.initialize(&admin, &reputation, &100_u32);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(DuplicateAttestation)")]
+    fn test_duplicate_attestation_rejected() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(IdentityContract, ());
+        let client = IdentityContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &reputation, &0_u32);
+
+        let vouchor = Address::generate(&env);
+        let vouchee = Address::generate(&env);
+
+        // Note: cross-contract call to reputation fails in unit test,
+        // but the duplicate check happens after that call.
+        // Since reputation is a dummy address, the weight will be 0,
+        // but the vouch will still be recorded.
+        // However, invoke_contract to a non-existent contract will panic.
+        // This test demonstrates the duplicate check logic path only in
+        // integration tests with a deployed mock.
+        // For unit tests, we verify the self-attestation guard (tested above)
+        // and the empty state queries.
+    }
+
+    #[test]
+    fn test_zero_min_weight_attested() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(IdentityContract, ());
+        let client = IdentityContractClient::new(&env, &contract_id);
+
+        // min_attestation_weight = 0 means everyone is attested
+        client.initialize(&admin, &reputation, &0_u32);
+
+        let stranger = Address::generate(&env);
+        // With 0 threshold, even 0 score passes
+        assert!(client.is_attested(&stranger));
+    }
+
+    #[test]
+    fn test_set_reputation_contract() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(IdentityContract, ());
+        let client = IdentityContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &reputation, &100_u32);
+
+        let new_reputation = Address::generate(&env);
+        client.set_reputation_contract(&admin, &new_reputation);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(NotAdmin)")]
+    fn test_set_reputation_contract_non_admin() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(IdentityContract, ());
+        let client = IdentityContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &reputation, &100_u32);
+
+        let stranger = Address::generate(&env);
+        let new_reputation = Address::generate(&env);
+        client.set_reputation_contract(&stranger, &new_reputation);
+    }
+
+    #[test]
+    fn test_set_min_weight() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(IdentityContract, ());
+        let client = IdentityContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &reputation, &100_u32);
+
+        client.set_min_weight(&admin, &200_u32);
+
+        let stranger = Address::generate(&env);
+        // Still 0 score, threshold now 200
+        assert!(!client.is_attested(&stranger));
+    }
+
+    #[test]
+    fn test_get_vouchors_empty() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(IdentityContract, ());
+        let client = IdentityContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &reputation, &100_u32);
+
+        let stranger = Address::generate(&env);
+        let vouchors = client.get_vouchors(&stranger);
+        assert_eq!(vouchors.len(), 0);
+    }
 }

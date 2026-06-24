@@ -619,4 +619,196 @@ mod test {
         // Same arbitrator tries to vote again
         client.cast_vote(&arb, &id, &true, &DisputeDecision::ForceDefault);
     }
+
+    // ------------------- Admin resolution tests -------------------
+
+    #[test]
+    fn test_admin_resolve_dispute() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let arbitrators = make_arbitrators(&env, 5);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(DisputeContract, ());
+        let client = DisputeContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &arbitrators, &3_u32, &reputation);
+
+        let group = Address::generate(&env);
+        client.authorize_group(&admin, &group);
+
+        let raiser = Address::generate(&env);
+        let reason = String::from_str(&env, "test");
+        let id = client.raise_dispute(&group, &raiser, &1_u64, &reason);
+
+        client.resolve_dispute(&admin, &id, &DisputeDecision::ReversePayout);
+
+        let d = client.get_dispute(&id);
+        assert_eq!(d.status, DisputeStatus::Resolved);
+        assert_eq!(d.decision, Some(DisputeDecision::ReversePayout));
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(AlreadyResolved)")]
+    fn test_resolve_already_resolved() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let arbitrators = make_arbitrators(&env, 5);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(DisputeContract, ());
+        let client = DisputeContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &arbitrators, &3_u32, &reputation);
+
+        let group = Address::generate(&env);
+        client.authorize_group(&admin, &group);
+
+        let raiser = Address::generate(&env);
+        let reason = String::from_str(&env, "test");
+        let id = client.raise_dispute(&group, &raiser, &1_u64, &reason);
+
+        // Resolve once
+        client.resolve_dispute(&admin, &id, &DisputeDecision::ForceDefault);
+        // Try to resolve again — should fail
+        client.resolve_dispute(&admin, &id, &DisputeDecision::Dismiss);
+    }
+
+    // ------------------- Arbitrator management tests -------------------
+
+    #[test]
+    fn test_add_arbitrator() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let arbitrators = make_arbitrators(&env, 3);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(DisputeContract, ());
+        let client = DisputeContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &arbitrators, &2_u32, &reputation);
+
+        let new_arb = Address::generate(&env);
+        client.add_arbitrator(&admin, &new_arb);
+
+        let fetched = client.get_arbitrators();
+        assert_eq!(fetched.len(), 4);
+    }
+
+    #[test]
+    fn test_add_duplicate_arbitrator_ignored() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let arbitrators = make_arbitrators(&env, 3);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(DisputeContract, ());
+        let client = DisputeContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &arbitrators, &2_u32, &reputation);
+
+        let existing = arbitrators.get(0).unwrap();
+        client.add_arbitrator(&admin, &existing);
+
+        let fetched = client.get_arbitrators();
+        assert_eq!(fetched.len(), 3); // no duplicate added
+    }
+
+    #[test]
+    fn test_remove_arbitrator() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let arbitrators = make_arbitrators(&env, 5);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(DisputeContract, ());
+        let client = DisputeContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &arbitrators, &3_u32, &reputation);
+
+        let to_remove = arbitrators.get(0).unwrap();
+        client.remove_arbitrator(&admin, &to_remove);
+
+        let fetched = client.get_arbitrators();
+        assert_eq!(fetched.len(), 4);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(NotAdmin)")]
+    fn test_add_arbitrator_non_admin() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let arbitrators = make_arbitrators(&env, 5);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(DisputeContract, ());
+        let client = DisputeContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &arbitrators, &3_u32, &reputation);
+
+        let stranger = Address::generate(&env);
+        let new_arb = Address::generate(&env);
+        client.add_arbitrator(&stranger, &new_arb);
+    }
+
+    // ------------------- Unauthorized raise dispute -------------------
+
+    #[test]
+    #[should_panic(expected = "Error(UnauthorizedCaller)")]
+    fn test_unauthorized_raise_dispute() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let arbitrators = make_arbitrators(&env, 5);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(DisputeContract, ());
+        let client = DisputeContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &arbitrators, &3_u32, &reputation);
+
+        // Not authorized
+        let rogue = Address::generate(&env);
+        let raiser = Address::generate(&env);
+        let reason = String::from_str(&env, "test");
+        client.raise_dispute(&rogue, &raiser, &1_u64, &reason);
+    }
+
+    // ------------------- Invalid required_votes -------------------
+
+    #[test]
+    #[should_panic(expected = "Error(InvalidDecision)")]
+    fn test_initialize_required_votes_too_low() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let arbitrators = make_arbitrators(&env, 5);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(DisputeContract, ());
+        let client = DisputeContractClient::new(&env, &contract_id);
+
+        // required_votes = 1 is below minimum of 2
+        client.initialize(&admin, &arbitrators, &1_u32, &reputation);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(InvalidDecision)")]
+    fn test_initialize_required_votes_exceeds_arbitrators() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let arbitrators = make_arbitrators(&env, 3);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(DisputeContract, ());
+        let client = DisputeContractClient::new(&env, &contract_id);
+
+        // required_votes = 4 but only 3 arbitrators
+        client.initialize(&admin, &arbitrators, &4_u32, &reputation);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(DisputeNotFound)")]
+    fn test_get_nonexistent_dispute() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let arbitrators = make_arbitrators(&env, 5);
+        let reputation = Address::generate(&env);
+        let contract_id = env.register(DisputeContract, ());
+        let client = DisputeContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &arbitrators, &3_u32, &reputation);
+
+        // No disputes raised yet
+        client.get_dispute(&999_u64);
+    }
 }

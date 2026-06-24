@@ -503,4 +503,110 @@ mod test {
         client.record_payment(&group, &member, &true);
         assert!(client.is_established(&member));
     }
+
+    #[test]
+    fn test_default_increments_both_counters() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let contract_id = env.register(ReputationContract, ());
+        let client = ReputationContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &1_u32);
+
+        let group = Address::generate(&env);
+        client.authorize_group(&admin, &group);
+
+        let member = Address::generate(&env);
+        client.record_default(&group, &member);
+
+        let rep = client.try_get_reputation(&member).unwrap();
+        assert_eq!(rep.cycles_defaulted, 1);
+        assert_eq!(rep.total_payments_due, 1);
+        assert_eq!(rep.on_time_payments, 0);
+
+        let ratio = client.get_on_time_ratio(&member);
+        assert_eq!(ratio, 0);
+    }
+
+    #[test]
+    fn test_composite_score_with_disputes() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let contract_id = env.register(ReputationContract, ());
+        let client = ReputationContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &1_u32);
+
+        let group = Address::generate(&env);
+        client.authorize_group(&admin, &group);
+
+        let member = Address::generate(&env);
+        client.record_payment(&group, &member, &true); // 100% ratio, score 600
+        client.record_dispute_outcome(&group, &member, &true); // lost dispute
+
+        let score = client.get_composite_score(&member);
+        // on_time: 600, cycles: 0, disputes: 100-50=50, bids: 0 = 650
+        assert_eq!(score, 650);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(ContractNotInitialized)")]
+    fn test_double_initialize() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let contract_id = env.register(ReputationContract, ());
+        let client = ReputationContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &3_u32);
+        client.initialize(&admin, &3_u32);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(NotAdmin)")]
+    fn test_authorize_group_non_admin() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let contract_id = env.register(ReputationContract, ());
+        let client = ReputationContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &3_u32);
+
+        let fake_admin = Address::generate(&env);
+        let group = Address::generate(&env);
+        client.authorize_group(&fake_admin, &group);
+    }
+
+    #[test]
+    fn test_revoke_group() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let contract_id = env.register(ReputationContract, ());
+        let client = ReputationContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &3_u32);
+
+        let group = Address::generate(&env);
+        client.authorize_group(&admin, &group);
+        client.revoke_group(&admin, &group);
+
+        // Now group should be unauthorized
+        let member = Address::generate(&env);
+        let result = client.try_record_payment(&group, &member, &true);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stranger_zero_reputation() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let contract_id = env.register(ReputationContract, ());
+        let client = ReputationContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &3_u32);
+
+        let stranger = Address::generate(&env);
+        assert_eq!(client.get_on_time_ratio(&stranger), 0);
+        assert_eq!(client.get_composite_score(&stranger), 0);
+        assert!(!client.is_established(&stranger));
+    }
 }
