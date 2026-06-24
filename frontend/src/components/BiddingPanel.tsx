@@ -64,7 +64,7 @@ export default function BiddingPanel({
     } finally {
       setCommitting(false);
     }
-  }, [connected, address, bidAmount, groupId, onBidCommitted]);
+  }, [connected, address, bidAmount, onBidCommitted]);
 
   const handleReveal = useCallback(async () => {
     if (!connected || !address) {
@@ -89,7 +89,7 @@ export default function BiddingPanel({
     } finally {
       setRevealing(false);
     }
-  }, [connected, address, savedAmount, savedNonce, groupId, onBidRevealed]);
+  }, [connected, address, savedAmount, savedNonce, onBidRevealed]);
 
   if (!connected) {
     return (

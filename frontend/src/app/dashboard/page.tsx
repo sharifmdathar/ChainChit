@@ -90,7 +90,7 @@ export default function DashboardPage() {
         <div className="animate-pulse-glow text-chit-muted text-center py-8">Loading groups...</div>
       ) : groups.length === 0 ? (
         <div className="glass-card p-8 text-center">
-          <p className="text-chit-muted mb-4">You haven't joined any groups yet.</p>
+          <p className="text-chit-muted mb-4">{"You haven't joined any groups yet."}</p>
           <Link href="/create-group" className="btn-primary">
             Create Your First Group
           </Link>

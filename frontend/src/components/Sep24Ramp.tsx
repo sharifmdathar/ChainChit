@@ -12,17 +12,6 @@ export default function Sep24Ramp() {
   const [depositing, setDepositing] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
 
-  if (!getSep24Url()) {
-    return (
-      <div className="glass-card p-6">
-        <h2 className="text-lg font-semibold mb-2">INR On/Off Ramp</h2>
-        <p className="text-chit-muted text-sm">
-          SEP-24 anchor not configured. Set NEXT_PUBLIC_ANCHOR_SEP24_URL to enable INR deposits and withdrawals.
-        </p>
-      </div>
-    );
-  }
-
   const handleDeposit = useCallback(async () => {
     if (!address || !depositAmount) return;
     setDepositing(true);
@@ -50,6 +39,17 @@ export default function Sep24Ramp() {
       setWithdrawing(false);
     }
   }, [address, withdrawAmount]);
+
+  if (!getSep24Url()) {
+    return (
+      <div className="glass-card p-6">
+        <h2 className="text-lg font-semibold mb-2">INR On/Off Ramp</h2>
+        <p className="text-chit-muted text-sm">
+          SEP-24 anchor not configured. Set NEXT_PUBLIC_ANCHOR_SEP24_URL to enable INR deposits and withdrawals.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-card p-6">
