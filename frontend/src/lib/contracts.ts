@@ -26,7 +26,18 @@ import type {
 } from "@/types";
 
 function env(name: string): string {
-  const val = process.env[`NEXT_PUBLIC_CONTRACT_${name}`] || "";
+  let val = "";
+  if (name === "CHIT_GROUP") {
+    val = process.env.NEXT_PUBLIC_CONTRACT_CHIT_GROUP || process.env.NEXT_PUBLIC_CHIT_GROUP_CONTRACT || "";
+  } else if (name === "REPUTATION") {
+    val = process.env.NEXT_PUBLIC_CONTRACT_REPUTATION || process.env.NEXT_PUBLIC_REPUTATION_CONTRACT || "";
+  } else if (name === "IDENTITY") {
+    val = process.env.NEXT_PUBLIC_CONTRACT_IDENTITY || process.env.NEXT_PUBLIC_IDENTITY_CONTRACT || "";
+  } else if (name === "DISPUTE") {
+    val = process.env.NEXT_PUBLIC_CONTRACT_DISPUTE || process.env.NEXT_PUBLIC_DISPUTE_CONTRACT || "";
+  } else if (name === "USDC") {
+    val = process.env.NEXT_PUBLIC_CONTRACT_USDC || process.env.NEXT_PUBLIC_USDC_CONTRACT || "";
+  }
   if (!val) throw new Error(`Contract ${name} not configured`);
   return val;
 }
