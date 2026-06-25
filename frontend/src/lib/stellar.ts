@@ -7,6 +7,7 @@ import {
 import { Address, Keypair, TransactionBuilder, SorobanRpc, Contract, xdr } from "@stellar/stellar-sdk";
 
 let kit: StellarWalletsKit | null = null;
+let activeAddress: string | null = null;
 
 function getKit(): StellarWalletsKit {
   if (!kit) {
@@ -42,18 +43,22 @@ export async function connectWallet(walletId: string = FREIGHTER_ID): Promise<st
 
   const { address } = await k.getAddress();
   if (!address) throw new Error("No address returned from wallet");
+  activeAddress = address;
   return address;
 }
 
 export async function disconnectWallet(): Promise<void> {
   kit = null;
+  activeAddress = null;
 }
 
 export async function getPublicKey(): Promise<string | null> {
+  if (activeAddress) return activeAddress;
   try {
     const k = getKit();
     const { address } = await k.getAddress();
-    return address || null;
+    activeAddress = address || null;
+    return activeAddress;
   } catch {
     return null;
   }
@@ -112,8 +117,18 @@ export async function invokeContract(
 ): Promise<xdr.ScVal | undefined> {
   const server = getRpcServer();
   const networkPassphrase = getNetworkPassphrase();
-  const publicKey = await getPublicKey();
-  if (!publicKey) throw new Error("Wallet not connected");
+  let publicKey = activeAddress;
+  if (!publicKey) {
+    publicKey = await getPublicKey();
+  }
+  if (!publicKey) {
+    if (!sign) {
+      // Simulation fallback to admin address
+      publicKey = "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR";
+    } else {
+      throw new Error("Wallet not connected");
+    }
+  }
 
   const contract = getContract(contractId);
   const account = await server.getAccount(publicKey);
