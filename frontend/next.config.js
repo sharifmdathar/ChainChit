@@ -13,6 +13,10 @@ const nextConfig = {
       tls: false,
       crypto: false,
     };
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'sodium-native': false,
+    };
     return config;
   },
 };

@@ -1,12 +1,8 @@
 import {
   StellarWalletsKit,
   FREIGHTER_ID,
-  XBULL_ID,
-  LOBSTR_ID,
   WalletNetwork,
   FreighterModule,
-  xBullModule,
-  LobstrModule,
 } from "@creit.tech/stellar-wallets-kit";
 import { Address, Keypair, TransactionBuilder, SorobanRpc, Contract, xdr } from "@stellar/stellar-sdk";
 
@@ -17,7 +13,7 @@ function getKit(): StellarWalletsKit {
     kit = new StellarWalletsKit({
       network: getNetwork(),
       selectedWalletId: FREIGHTER_ID,
-      modules: [new FreighterModule(), new xBullModule(), new LobstrModule()],
+      modules: [new FreighterModule()],
     });
   }
   return kit;
@@ -280,6 +276,4 @@ export async function initiateSep24Withdraw(
 
 export const SUPPORTED_WALLETS = [
   { id: FREIGHTER_ID, name: "Freighter", icon: "🦡" },
-  { id: XBULL_ID, name: "xBull", icon: "🐂" },
-  { id: LOBSTR_ID, name: "Lobstr", icon: "🦞" },
 ];
