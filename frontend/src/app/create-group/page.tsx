@@ -85,7 +85,7 @@ export default function CreateGroupPage() {
             required
             className="w-full px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
           />
-          <p className="text-chit-muted text-xs mt-1">USDC has 7 decimals. 10 USDC = 10,000,000</p>
+          <p className="text-chit-muted text-xs mt-1">Enter amount in USDC base units. 10 USDC = 10,000,000</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

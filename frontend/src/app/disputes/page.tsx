@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
-import { getDispute, getArbitrators } from "@/lib/contracts";
+import { getDispute, getArbitrators, raiseDispute } from "@/lib/contracts";
 import { shortenAddress } from "@/lib/utils";
 import DisputeModal from "@/components/DisputeModal";
 import type { DisputeRecord } from "@/types";
@@ -15,6 +15,8 @@ export default function DisputesPage() {
   const [arbitrators, setArbitrators] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [disputeIdInput, setDisputeIdInput] = useState("");
+  const [raiseReason, setRaiseReason] = useState("");
+  const [raising, setRaising] = useState(false);
 
   const isArbitrator = address ? arbitrators.includes(address) : false;
 
@@ -98,6 +100,40 @@ export default function DisputesPage() {
           />
           <button onClick={handleLookup} className="btn-secondary">
             Lookup
+          </button>
+        </div>
+      </div>
+
+      {/* Raise Dispute */}
+      <div className="glass-card p-4 space-y-3">
+        <h2 className="text-sm font-semibold text-chit-text">Raise Dispute</h2>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={raiseReason}
+            onChange={(e) => setRaiseReason(e.target.value)}
+            placeholder="Reason for dispute (e.g. member defaulted on cycle 1)"
+            className="flex-1 px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
+          />
+          <button
+            onClick={async () => {
+              if (!raiseReason.trim()) { toast.error("Enter a reason"); return; }
+              setRaising(true);
+              try {
+                await raiseDispute(raiseReason.trim());
+                toast.success("Dispute raised successfully!");
+                setRaiseReason("");
+                fetchAllDisputes();
+              } catch (err: unknown) {
+                toast.error(err instanceof Error ? err.message : "Failed to raise dispute");
+              } finally {
+                setRaising(false);
+              }
+            }}
+            disabled={raising || !raiseReason.trim()}
+            className="btn-primary whitespace-nowrap"
+          >
+            {raising ? "Raising..." : "Raise Dispute"}
           </button>
         </div>
       </div>

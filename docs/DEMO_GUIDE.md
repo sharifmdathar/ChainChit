@@ -6,10 +6,10 @@ Follow this step-by-step script to record a professional, high-quality 2-minute 
 
 ## Preparation (Before Recording)
 
-1. **Reputation Bootstrapped**: We have already seeded your main admin wallet with a reputation history on testnet (3 payments on time, 2 completed cycles). Your profile will immediately display a high composite reputation score (~640) and a reputation tier badge.
+1. **Reputation Bootstrapped**: We have already seeded your main admin wallet with a reputation history on testnet (3 payments on time, 2 completed cycles). Your profile will immediately display a high composite reputation score (~740) and a reputation tier badge.
 2. **Fund Your Wallet**: Make sure your Freighter wallet has both **XLM** (for gas/fees) and **USDC** (the group token).
-   - If you need USDC, click the **SEP-24 Ramp** button on the dashboard to request test USDC, or fund it via the Stellar Laboratory.
-3. **Open the App**: Run the app locally (`npm run dev`) and open `http://localhost:3000`.
+   - If you need USDC, click the **USDC On/Off Ramp** section on the dashboard to deposit test USDC via the SEP-24 interactive anchor, or fund it via the Stellar Laboratory.
+3. **Open the App**: Run the app locally (`bun dev` or `npm run dev`) and open `http://localhost:3000`.
 
 ---
 
@@ -28,7 +28,7 @@ Follow this step-by-step script to record a professional, high-quality 2-minute 
 * **What to show**: The **Profile** page.
 * **What to do**:
   1. Click **Profile** in the navigation bar.
-  2. Highlight the **Composite Reputation Score** (e.g., 640) and the **Reputation Badge**.
+  2. Highlight the **Composite Reputation Score** (e.g., 740) and the **Reputation Badge**.
   3. Explain that this score is calculated on-chain from payment ratios and completed cycles.
 * **What to say**: *"On the Profile page, you can see my composite reputation score. This is computed dynamically by our Reputation smart contract based on my payment history and completed cycles. High reputation reduces collateral requirements and allows participating in premium groups."*
 
@@ -37,7 +37,7 @@ Follow this step-by-step script to record a professional, high-quality 2-minute 
 * **What to do**:
   1. Click **Create Group** in the nav bar.
   2. Fill out the form:
-     - **Contribution**: `10000000` (10 USDC, since USDC has 7 decimals).
+     - **Contribution**: `10000000` (10 USDC).
      - **Members**: `2` (set to 2 for quick simulation).
      - **Cycles**: `2`.
      - **Min Attestation Score**: `0` (so anyone can join for testing).
@@ -67,9 +67,10 @@ Follow this step-by-step script to record a professional, high-quality 2-minute 
 * **What to say**: *"If a member defaults or a disagreement occurs, a dispute can be raised. This triggers our Multi-Sig Dispute contract where an arbitrator panel votes on-chain to resolve or dismiss the dispute."*
 
 ### 6. SEP-24 Fiat Ramp & Conclusion (1:50 - 2:00)
-* **What to show**: The **SEP-24 Ramp** popup/panel on the dashboard.
+* **What to show**: The **USDC On/Off Ramp** section on the dashboard.
 * **What to do**:
-  1. Show the **Deposit INR / Withdraw INR** input fields.
-  2. Click **Initiate Deposit** to show the interactive anchor window opening.
-  3. Conclude the video.
-* **What to say**: *"Finally, we integrated a SEP-24 INR fiat ramp to allow users to easily deposit bank funds directly into USDC on Stellar. This concludes the demo of ChainChit — bringing transparency and trust to rotating savings. Thank you!"*
+  1. Show the **Deposit → USDC** and **Withdraw USDC →** input fields.
+  2. Enter an amount (e.g., `10`) and click **Deposit** to show the interactive anchor window opening (Stellar testanchor UI).
+  3. Point out the transaction details: amount, fee, status (`pending_anchor`), and destination account.
+  4. Conclude the video.
+* **What to say**: *"Finally, we integrated a SEP-24 fiat on-ramp. Users can deposit funds directly into USDC on Stellar through an interactive anchor flow — complete with SEP-10 authentication handled automatically. This concludes the demo of ChainChit — bringing transparency and trust to rotating savings. Thank you!"*

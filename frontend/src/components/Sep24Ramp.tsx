@@ -53,22 +53,22 @@ export default function Sep24Ramp() {
 
   return (
     <div className="glass-card p-6">
-      <h2 className="text-lg font-semibold mb-4">INR On/Off Ramp</h2>
+      <h2 className="text-lg font-semibold mb-4">USDC On/Off Ramp</h2>
       <p className="text-chit-muted text-sm mb-4">
-        Deposit INR via bank transfer to receive USDC on-chain, or withdraw USDC back to your bank account.
+        Deposit fiat to receive USDC on-chain, or withdraw USDC back to your bank account.
         Powered by SEP-24 anchor integration.
       </p>
 
       <div className="grid md:grid-cols-2 gap-4">
         {/* Deposit */}
         <div className="p-4 rounded-lg bg-chit-bg border border-chit-border">
-          <h3 className="text-sm font-medium text-chit-text mb-2">Deposit INR → USDC</h3>
+          <h3 className="text-sm font-medium text-chit-text mb-2">Deposit → USDC</h3>
           <div className="flex gap-2">
             <input
               type="number"
               value={depositAmount}
               onChange={(e) => setDepositAmount(e.target.value)}
-              placeholder="Amount in INR"
+              placeholder="Amount in USDC"
               min="1"
               disabled={!connected}
               className="flex-1 px-3 py-2 rounded-lg bg-chit-card border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
@@ -85,13 +85,13 @@ export default function Sep24Ramp() {
 
         {/* Withdraw */}
         <div className="p-4 rounded-lg bg-chit-bg border border-chit-border">
-          <h3 className="text-sm font-medium text-chit-text mb-2">Withdraw USDC → INR</h3>
+          <h3 className="text-sm font-medium text-chit-text mb-2">Withdraw USDC →</h3>
           <div className="flex gap-2">
             <input
               type="number"
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
-              placeholder="Amount in INR"
+              placeholder="Amount in USDC"
               min="1"
               disabled={!connected}
               className="flex-1 px-3 py-2 rounded-lg bg-chit-card border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
