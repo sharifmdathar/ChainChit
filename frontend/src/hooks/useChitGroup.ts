@@ -35,7 +35,7 @@ interface UseChitGroupReturn {
   dispute: (reason: string) => Promise<void>;
 }
 
-export function useChitGroup(): UseChitGroupReturn {
+export function useChitGroup(contractId: string): UseChitGroupReturn {
   const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
   const [members, setMembers] = useState<string[]>([]);
   const [cycleState, setCycleState] = useState<CycleState | null>(null);
@@ -57,57 +57,68 @@ export function useChitGroup(): UseChitGroupReturn {
   }, []);
 
   const fetchGroupInfo = useCallback(async () => {
+    if (!contractId) return;
     await withLoading(async () => {
-      const info = await getGroupInfo();
+      const info = await getGroupInfo(contractId);
       setGroupInfo(info);
     });
-  }, [withLoading]);
+  }, [withLoading, contractId]);
 
   const fetchMembers = useCallback(async () => {
+    if (!contractId) return;
     await withLoading(async () => {
-      const m = await getMembers();
+      const m = await getMembers(contractId);
       setMembers(m);
     });
-  }, [withLoading]);
+  }, [withLoading, contractId]);
 
   const fetchCycleState = useCallback(async (cycle: number) => {
+    if (!contractId) return;
     await withLoading(async () => {
-      const cs = await getCycleState(cycle);
+      const cs = await getCycleState(contractId, cycle);
       setCycleState(cs);
     });
-  }, [withLoading]);
+  }, [withLoading, contractId]);
 
   const join = useCallback(async () => {
-    await withLoading(async () => { await joinGroup(); });
-  }, [withLoading]);
+    if (!contractId) return;
+    await withLoading(async () => { await joinGroup(contractId); });
+  }, [withLoading, contractId]);
 
   const start = useCallback(async () => {
-    await withLoading(async () => { await startCollection(); });
-  }, [withLoading]);
+    if (!contractId) return;
+    await withLoading(async () => { await startCollection(contractId); });
+  }, [withLoading, contractId]);
 
   const pay = useCallback(async () => {
-    await withLoading(async () => { await payContribution(); });
-  }, [withLoading]);
+    if (!contractId) return;
+    await withLoading(async () => { await payContribution(contractId); });
+  }, [withLoading, contractId]);
 
   const commit = useCallback(async (commitment: number[]) => {
-    await withLoading(async () => { await commitBid(commitment); });
-  }, [withLoading]);
+    if (!contractId) return;
+    await withLoading(async () => { await commitBid(contractId, commitment); });
+  }, [withLoading, contractId]);
 
   const reveal = useCallback(async (amount: number, nonce: number) => {
-    await withLoading(async () => { await revealBid(amount, nonce); });
-  }, [withLoading]);
+    if (!contractId) return;
+    await withLoading(async () => { await revealBid(contractId, amount, nonce); });
+  }, [withLoading, contractId]);
 
   const payout = useCallback(async () => {
-    await withLoading(async () => { await executePayout(); });
-  }, [withLoading]);
+    if (!contractId) return;
+    await withLoading(async () => { await executePayout(contractId); });
+  }, [withLoading, contractId]);
 
   const advance = useCallback(async () => {
-    await withLoading(async () => { await advanceCycle(); });
-  }, [withLoading]);
+    if (!contractId) return;
+    await withLoading(async () => { await advanceCycle(contractId); });
+  }, [withLoading, contractId]);
 
   const dispute = useCallback(async (reason: string) => {
-    await withLoading(async () => { await raiseDispute(reason); });
-  }, [withLoading]);
+    if (!contractId) return;
+    await withLoading(async () => { await raiseDispute(contractId, reason); });
+  }, [withLoading, contractId]);
 
   return {
     groupInfo, members, cycleState, loading, error,

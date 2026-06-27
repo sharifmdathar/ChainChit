@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@/hooks/useWallet";
-import { initializeGroup } from "@/lib/contracts";
+import { createGroup } from "@/lib/contracts";
 import toast from "react-hot-toast";
 
 export default function CreateGroupPage() {
@@ -36,15 +36,18 @@ export default function CreateGroupPage() {
 
     setLoading(true);
     try {
-      // In production, these would be the actual deployed contract IDs
       const usdcContract = process.env.NEXT_PUBLIC_USDC_CONTRACT || "";
       if (!usdcContract) {
         toast.error("USDC contract not configured");
         return;
       }
 
-      await initializeGroup({
-        admin: address,
+      const salt = new Uint8Array(32);
+      crypto.getRandomValues(salt);
+
+      const groupId = await createGroup({
+        caller: address,
+        salt,
         token: usdcContract,
         contributionAmount: contribAmount,
         numMembers: members,
@@ -53,10 +56,11 @@ export default function CreateGroupPage() {
         minReputationForBid: minRep,
       });
 
-      toast.success("Group created successfully!");
+      toast.success(`Group created successfully! ID: ${groupId}`);
       router.push("/dashboard");
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to create group");
+    } catch (err: any) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(msg || "Failed to create group");
     } finally {
       setLoading(false);
     }

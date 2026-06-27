@@ -15,6 +15,7 @@ export default function DisputesPage() {
   const [arbitrators, setArbitrators] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [disputeIdInput, setDisputeIdInput] = useState("");
+  const [groupIdInput, setGroupIdInput] = useState("");
   const [raiseReason, setRaiseReason] = useState("");
   const [raising, setRaising] = useState(false);
 
@@ -107,20 +108,28 @@ export default function DisputesPage() {
       {/* Raise Dispute */}
       <div className="glass-card p-4 space-y-3">
         <h2 className="text-sm font-semibold text-chit-text">Raise Dispute</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-col md:flex-row gap-2">
+          <input
+            type="text"
+            value={groupIdInput}
+            onChange={(e) => setGroupIdInput(e.target.value)}
+            placeholder="Group ID (contract address)"
+            className="flex-1 md:w-1/3 px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
+          />
           <input
             type="text"
             value={raiseReason}
             onChange={(e) => setRaiseReason(e.target.value)}
             placeholder="Reason for dispute (e.g. member defaulted on cycle 1)"
-            className="flex-1 px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
+            className="flex-1 md:w-2/3 px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
           />
           <button
             onClick={async () => {
+              if (!groupIdInput.trim()) { toast.error("Enter a group ID"); return; }
               if (!raiseReason.trim()) { toast.error("Enter a reason"); return; }
               setRaising(true);
               try {
-                await raiseDispute(raiseReason.trim());
+                await raiseDispute(groupIdInput.trim(), raiseReason.trim());
                 toast.success("Dispute raised successfully!");
                 setRaiseReason("");
                 fetchAllDisputes();

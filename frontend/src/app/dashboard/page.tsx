@@ -7,6 +7,7 @@ import { ReputationBadge } from "@/components/ReputationBadge";
 import { GroupCard } from "@/components/GroupCard";
 import Sep24Ramp from "@/components/Sep24Ramp";
 import { basisPointsToPercent } from "@/lib/utils";
+import { getUserGroups, getGroupInfo, getMembers } from "@/lib/contracts";
 import type { GroupInfo } from "@/types";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -33,17 +34,33 @@ export default function DashboardPage() {
     async function loadGroups() {
       setLoading(true);
       try {
-        // In production, this would iterate over deployed group contracts
-        // For now, show placeholder
-        setGroups([]);
-      } catch {
+        const groupIds = await getUserGroups(address!);
+        const loadedGroups: GroupWithMembers[] = [];
+        
+        for (const contractId of groupIds) {
+          try {
+            const info = await getGroupInfo(contractId);
+            const members = await getMembers(contractId);
+            loadedGroups.push({
+              info,
+              memberCount: members.length,
+              contractId
+            });
+          } catch (e) {
+            console.error("Failed to load group", contractId, e);
+          }
+        }
+        
+        setGroups(loadedGroups);
+      } catch (e) {
+        console.error(e);
         toast.error("Failed to load groups");
       } finally {
         setLoading(false);
       }
     }
-    if (connected) loadGroups();
-  }, [connected]);
+    if (connected && address) loadGroups();
+  }, [connected, address]);
 
   if (!connected) {
     return (

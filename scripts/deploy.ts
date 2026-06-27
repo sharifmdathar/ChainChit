@@ -45,32 +45,48 @@ function run(cmd: string): string {
   return execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
 }
 
-function buildWasm(contractDir: string): string {
-  const wasmPath = join(
-    ROOT_DIR,
-    "target",
-    "wasm32v1-none",
-    "release",
-    `${contractDir.replace(/_/g, "_")}.wasm`
-  );
+function runWithRetry(cmd: string, retries: number = 10): string {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return run(cmd);
+    } catch (err: any) {
+      const errMsg = err.stderr?.toString() || err.stdout?.toString() || err.message || '';
+      const waitSec = 6 + (i * 6); // 6, 12, 18, 24...
+      if (i === retries - 1) {
+        console.error(`Final attempt failed: ${errMsg}`);
+        throw err;
+      }
+      console.log(`Command failed (${errMsg.split('\n')[0]}), retrying in ${waitSec}s... (${i + 1}/${retries})`);
+      try {
+        execSync(`sleep ${waitSec}`);
+      } catch (e) {}
+    }
+  }
+  throw new Error("Unreachable");
+}
 
-  // Find the actual wasm file
-  const findCmd = `find ${join(ROOT_DIR, "target", "wasm32v1-none", "release")} -name "${contractDir}*.wasm" -type f 2>/dev/null | head -1`;
+function buildWasm(contractDir: string): string {
+  const releaseDir = join(ROOT_DIR, "target", "wasm32v1-none", "release");
+  const optimizedPath = join(releaseDir, `${contractDir}.wasm`);
+
+  // Always rebuild to ensure the WASM matches current source
+  console.log(`Building ${contractDir}...`);
+  run(`stellar contract build --package ${contractDir} 2>&1`);
+
+  // Prefer the optimized wasm in release root (not deps/)
+  if (existsSync(optimizedPath)) return optimizedPath;
+
+  // Fallback: search for it
+  const findCmd = `find ${releaseDir} -maxdepth 1 -name "${contractDir}*.wasm" -type f 2>/dev/null | head -1`;
   const found = run(findCmd);
   if (found) return found;
 
-  console.log(`Building ${contractDir}...`);
-  run(`stellar contract build --package ${contractDir} 2>&1`);
-  const afterBuild = run(findCmd);
-  if (!afterBuild) {
-    throw new Error(`WASM not found for ${contractDir}`);
-  }
-  return afterBuild;
+  throw new Error(`WASM not found for ${contractDir} after build`);
 }
 
 function deployWasm(wasmPath: string): string {
   console.log(`Deploying ${wasmPath}...`);
-  const output = run(
+  const output = runWithRetry(
     `stellar contract deploy --wasm ${wasmPath} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} 2>&1`
   );
   // Extract contract ID from output
@@ -87,9 +103,22 @@ function invokeInit(
   args: string
 ): void {
   console.log(`Initializing ${method}...`);
-  run(
+  runWithRetry(
     `stellar contract invoke --id ${contractId} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} -- ${method} ${args} 2>&1`
   );
+}
+
+function installWasm(wasmPath: string): string {
+  console.log(`Installing ${wasmPath}...`);
+  const output = runWithRetry(
+    `stellar contract upload --wasm ${wasmPath} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} 2>&1`
+  );
+  // Get the LAST 64-char hex hash (skips deprecation warnings etc.)
+  const matches = output.match(/[a-f0-9]{64}/g);
+  if (!matches || matches.length === 0) {
+    throw new Error(`Failed to parse wasm hash from: ${output}`);
+  }
+  return matches[matches.length - 1];
 }
 
 async function main() {
@@ -99,7 +128,7 @@ async function main() {
     { name: "reputation", package: "reputation" },
     { name: "identity", package: "identity" },
     { name: "dispute", package: "dispute" },
-    { name: "chit_group", package: "chit_group" },
+    { name: "factory", package: "factory" },
   ];
 
   const deployed: DeployResult[] = [];
@@ -109,20 +138,24 @@ async function main() {
   for (const c of contracts) {
     buildWasm(c.package);
   }
+  const chitGroupWasm = buildWasm("chit_group");
 
-  // 2. Deploy in dependency order (reputation first, then identity/dispute, then chit_group)
-  console.log("\nStep 2: Deploying contracts...\n");
+  // 2. Deploy/Install
+  console.log("\nStep 2: Deploying & Installing contracts...\n");
   for (const c of contracts) {
     const wasmPath = buildWasm(c.package);
     const contractId = deployWasm(wasmPath);
     deployed.push({ name: c.name, contractId });
     console.log(`  ✓ ${c.name}: ${contractId}\n`);
   }
+  
+  const chitGroupHash = installWasm(chitGroupWasm);
+  console.log(`  ✓ chit_group (installed hash): ${chitGroupHash}\n`);
 
   const reputationId = deployed.find((d) => d.name === "reputation")!.contractId;
   const identityId = deployed.find((d) => d.name === "identity")!.contractId;
   const disputeId = deployed.find((d) => d.name === "dispute")!.contractId;
-  const chitGroupId = deployed.find((d) => d.name === "chit_group")!.contractId;
+  const factoryId = deployed.find((d) => d.name === "factory")!.contractId;
 
   // 3. Initialize contracts
   console.log("Step 3: Initializing contracts...\n");
@@ -148,12 +181,6 @@ async function main() {
       `--admin ${adminAddress} --min_payments_for_trust 3`
     );
 
-    // Authorize ChitGroup contract in Reputation
-    console.log("Authorizing ChitGroup in Reputation...");
-    run(
-      `stellar contract invoke --id ${reputationId} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} -- authorize_group --caller ${adminAddress} --group ${chitGroupId} 2>&1`
-    );
-
     // Init Identity
     invokeInit(
       identityId,
@@ -168,10 +195,23 @@ async function main() {
       `--admin ${adminAddress} --arbitrators '["${adminAddress}", "${dummy1}", "${dummy2}"]' --required_votes 2 --reputation_contract ${reputationId}`
     );
 
-    // Authorize ChitGroup contract in Dispute
-    console.log("Authorizing ChitGroup in Dispute...");
-    run(
-      `stellar contract invoke --id ${disputeId} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} -- authorize_group --caller ${adminAddress} --group ${chitGroupId} 2>&1`
+    // Init Factory
+    invokeInit(
+      factoryId,
+      "initialize",
+      `--admin ${adminAddress} --wasm_hash ${chitGroupHash} --reputation_contract ${reputationId} --identity_contract ${identityId} --dispute_contract ${disputeId}`
+    );
+
+    // Set Factory in Reputation
+    console.log("Setting Factory in Reputation...");
+    runWithRetry(
+      `stellar contract invoke --id ${reputationId} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} -- set_factory --caller ${adminAddress} --factory ${factoryId} 2>&1`
+    );
+
+    // Set Factory in Dispute
+    console.log("Setting Factory in Dispute...");
+    runWithRetry(
+      `stellar contract invoke --id ${disputeId} --source ${SECRET_KEY} --network-passphrase "${NETWORK_PASSPHRASE}" --rpc-url ${RPC_URL} -- set_factory --caller ${adminAddress} --factory ${factoryId} 2>&1`
     );
   }
 
@@ -180,19 +220,19 @@ async function main() {
   const envContent = `# Auto-generated by deploy.ts — ${new Date().toISOString()}
 NEXT_PUBLIC_NETWORK=${NETWORK.toUpperCase()}
 NEXT_PUBLIC_STELLAR_RPC_URL=${RPC_URL}
-NEXT_PUBLIC_CHIT_GROUP_CONTRACT=${chitGroupId}
+NEXT_PUBLIC_FACTORY_CONTRACT=${factoryId}
 NEXT_PUBLIC_REPUTATION_CONTRACT=${reputationId}
 NEXT_PUBLIC_IDENTITY_CONTRACT=${identityId}
 NEXT_PUBLIC_DISPUTE_CONTRACT=${disputeId}
-NEXT_PUBLIC_USDC_CONTRACT=CCW67TSUGAEKE6SPMB5IKCTXZQH5HM6F3TGH4XLCSKL5Y5HEKUC7OS2A
+NEXT_PUBLIC_USDC_CONTRACT=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
 NEXT_PUBLIC_ANCHOR_SEP24_URL=https://testanchor.stellar.org/sep24
 
 # Frontend alternate contract naming conventions
-NEXT_PUBLIC_CONTRACT_CHIT_GROUP=${chitGroupId}
+NEXT_PUBLIC_CONTRACT_FACTORY=${factoryId}
 NEXT_PUBLIC_CONTRACT_REPUTATION=${reputationId}
 NEXT_PUBLIC_CONTRACT_IDENTITY=${identityId}
 NEXT_PUBLIC_CONTRACT_DISPUTE=${disputeId}
-NEXT_PUBLIC_CONTRACT_USDC=CCW67TSUGAEKE6SPMB5IKCTXZQH5HM6F3TGH4XLCSKL5Y5HEKUC7OS2A
+NEXT_PUBLIC_CONTRACT_USDC=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
 `;
   writeFileSync(ENV_FILE, envContent);
   console.log(`  ✓ Written to ${ENV_FILE}\n`);
@@ -202,6 +242,7 @@ NEXT_PUBLIC_CONTRACT_USDC=CCW67TSUGAEKE6SPMB5IKCTXZQH5HM6F3TGH4XLCSKL5Y5HEKUC7OS
   for (const d of deployed) {
     console.log(`  ${d.name}: ${d.contractId}`);
   }
+  console.log(`  chit_group (hash): ${chitGroupHash}`);
   console.log(`\n  Network: ${NETWORK}`);
   console.log(`  Admin: ${adminAddress || "(manual init required)"}`);
   console.log("\nDone! Run `cd frontend && npm run dev` to start the app.\n");
@@ -211,3 +252,4 @@ main().catch((err) => {
   console.error("Deployment failed:", err);
   process.exit(1);
 });
+

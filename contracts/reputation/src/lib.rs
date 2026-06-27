@@ -37,6 +37,7 @@ pub enum DataKey {
     AuthorizedGroup(Address),
     /// Minimum payments before a member is considered "established".
     MinPaymentsForTrust,
+    Factory,
 }
 
 // ---------------------------------------------------------------------------
@@ -80,6 +81,21 @@ impl ReputationContract {
         Ok(())
     }
 
+    /// Set the factory contract that is allowed to authorize groups
+    pub fn set_factory(env: Env, caller: Address, factory: Address) -> Result<(), Error> {
+        caller.require_auth();
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::ContractNotInitialized)?;
+        if caller != admin {
+            return Err(Error::NotAdmin);
+        }
+        env.storage().instance().set(&DataKey::Factory, &factory);
+        Ok(())
+    }
+
     /// Authorize a ChitGroup contract to call record_* functions.
     pub fn authorize_group(env: Env, caller: Address, group: Address) -> Result<(), Error> {
         caller.require_auth();
@@ -88,7 +104,10 @@ impl ReputationContract {
             .instance()
             .get(&DataKey::Admin)
             .ok_or(Error::ContractNotInitialized)?;
-        if caller != admin {
+            
+        let factory: Option<Address> = env.storage().instance().get(&DataKey::Factory);
+        
+        if caller != admin && Some(caller.clone()) != factory {
             return Err(Error::NotAdmin);
         }
         if env

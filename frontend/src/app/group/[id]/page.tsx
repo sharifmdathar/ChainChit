@@ -14,12 +14,12 @@ export default function GroupDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { connected, address } = useWallet();
+  const groupId = params.id as string;
   const {
     groupInfo, members, cycleState, loading,
     fetchGroupInfo, fetchMembers, fetchCycleState,
     join, start, advance, dispute,
-  } = useChitGroup();
-  const groupId = params.id as string;
+  } = useChitGroup(groupId);
 
   useEffect(() => {
     if (connected && groupId) {
@@ -108,6 +108,7 @@ export default function GroupDetailPage() {
 
       {groupInfo.state === "Collecting" && isMember && (
         <ContributionFlow
+          groupId={params.id as string}
           contributionAmount={groupInfo.contribution_amount}
           cycle={groupInfo.current_cycle}
           onPaid={() => { fetchGroupInfo(); fetchCycleState(groupInfo.current_cycle); }}

@@ -7,14 +7,15 @@ import { formatUsdc } from "@/lib/utils";
 import toast from "react-hot-toast";
 
 interface ContributionFlowProps {
+  groupId: string;
   contributionAmount: number;
   cycle: number;
   onPaid?: () => void;
 }
 
-export function ContributionFlow({ contributionAmount, cycle, onPaid }: ContributionFlowProps) {
+export function ContributionFlow({ groupId, contributionAmount, cycle, onPaid }: ContributionFlowProps) {
   const { connected, address } = useWallet();
-  const { pay, loading } = useChitGroup();
+  const { pay, loading } = useChitGroup(groupId);
   const [confirming, setConfirming] = useState(false);
 
   const handlePay = async () => {

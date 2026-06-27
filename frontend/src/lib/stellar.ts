@@ -4,7 +4,7 @@ import {
   WalletNetwork,
   FreighterModule,
 } from "@creit.tech/stellar-wallets-kit";
-import { Address, Keypair, TransactionBuilder, SorobanRpc, Contract, xdr } from "@stellar/stellar-sdk";
+import { Address, Keypair, TransactionBuilder, rpc, Contract, xdr } from "@stellar/stellar-sdk";
 
 let kit: StellarWalletsKit | null = null;
 let activeAddress: string | null = null;
@@ -20,9 +20,9 @@ function getKit(): StellarWalletsKit {
   return kit;
 }
 
-export function getRpcServer(): SorobanRpc.Server {
+export function getRpcServer(): rpc.Server {
   const rpcUrl = process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "https://rpc.stellar.org";
-  return new SorobanRpc.Server(rpcUrl, { allowHttp: false });
+  return new rpc.Server(rpcUrl, { allowHttp: false });
 }
 
 export function getNetworkPassphrase(): string {
@@ -55,7 +55,7 @@ export async function getPublicKey(): Promise<string | null> {
 
 export async function signAndSendTransaction(
   txXdr: string
-): Promise<SorobanRpc.Api.SendTransactionResponse> {
+): Promise<rpc.Api.SendTransactionResponse> {
   const networkPassphrase = getNetworkPassphrase();
   const keypair = Keypair.fromSecret("SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG");
   const tx = TransactionBuilder.fromXDR(txXdr, networkPassphrase);
@@ -131,11 +131,11 @@ export async function invokeContract(
 
   const simResponse = await server.simulateTransaction(tx);
 
-  if (SorobanRpc.Api.isSimulationError(simResponse)) {
+  if (rpc.Api.isSimulationError(simResponse)) {
     throw new Error(`Simulation error: ${simResponse.error}`);
   }
 
-  const assembledTx = SorobanRpc.assembleTransaction(tx, simResponse).build();
+  const assembledTx = rpc.assembleTransaction(tx, simResponse).build();
 
   if (!sign) {
     return simResponse.result?.retval;
@@ -170,52 +170,104 @@ export function vecU8ToScVal(bytes: number[]): xdr.ScVal {
   return xdr.ScVal.scvVec(vec);
 }
 
+/** Encode a 32-byte array as scvBytes (for Soroban BytesN<32>) */
+export function bytesN32ToScVal(bytes: Uint8Array | number[]): xdr.ScVal {
+  const buf = Buffer.from(bytes);
+  return xdr.ScVal.scvBytes(buf);
+}
+
+function debugWrap<T>(fnName: string, val: xdr.ScVal, fn: () => T): T {
+  try {
+    return fn();
+  } catch (err: any) {
+    console.error(`[DEBUG SCVAL] Error in ${fnName}:`, err);
+    try {
+      if (val && typeof val.switch === "function") {
+        console.error(`[DEBUG SCVAL] Val switch name:`, val.switch().name);
+        console.error(`[DEBUG SCVAL] Val JSON:`, JSON.stringify(val));
+      } else {
+        console.error(`[DEBUG SCVAL] Val is not a valid ScVal:`, val);
+      }
+    } catch (e) {
+      console.error(`[DEBUG SCVAL] Failed to print val details:`, e);
+    }
+    throw err;
+  }
+}
+
 export function scValToU32(val: xdr.ScVal): number {
-  if (val.switch().name === "scvU32") {
-    return Number(val.u32());
-  }
-  if (val.switch().name === "scvU64") {
-    return Number(val.u64().toString());
-  }
-  throw new Error(`Expected u32/u64, got ${val.switch().name}`);
+  return debugWrap("scValToU32", val, () => {
+    if (val.switch().name === "scvU32") {
+      return Number(val.u32());
+    }
+    if (val.switch().name === "scvU64") {
+      return Number(val.u64().toString());
+    }
+    throw new Error(`Expected u32/u64, got ${val.switch().name}`);
+  });
 }
 
 export function scValToU64(val: xdr.ScVal): number {
-  if (val.switch().name === "scvU64") {
-    return Number(val.u64().toString());
-  }
-  if (val.switch().name === "scvU32") {
-    return Number(val.u32());
-  }
-  throw new Error(`Expected u64, got ${val.switch().name}`);
+  return debugWrap("scValToU64", val, () => {
+    if (val.switch().name === "scvU64") {
+      return Number(val.u64().toString());
+    }
+    if (val.switch().name === "scvU32") {
+      return Number(val.u32());
+    }
+    throw new Error(`Expected u64, got ${val.switch().name}`);
+  });
 }
 
 export function scValToBool(val: xdr.ScVal): boolean {
-  if (val.switch().name === "scvBool") {
-    return val.b();
-  }
-  throw new Error(`Expected bool, got ${val.switch().name}`);
+  return debugWrap("scValToBool", val, () => {
+    if (val.switch().name === "scvBool") {
+      return val.b();
+    }
+    throw new Error(`Expected bool, got ${val.switch().name}`);
+  });
 }
 
 export function scValToString(val: xdr.ScVal): string {
-  if (val.switch().name === "scvString") {
-    return val.str().toString();
-  }
-  throw new Error(`Expected string, got ${val.switch().name}`);
+  return debugWrap("scValToString", val, () => {
+    if (val.switch().name === "scvString") {
+      return val.str().toString();
+    }
+    if (val.switch().name === "scvSymbol") {
+      return val.sym().toString();
+    }
+    if (val.switch().name === "scvVec") {
+      const vec = val.vec();
+      if (vec && vec.length > 0) {
+        const first = vec[0];
+        if (first.switch().name === "scvSymbol") {
+          return first.sym().toString();
+        }
+        if (first.switch().name === "scvString") {
+          return first.str().toString();
+        }
+      }
+    }
+    throw new Error(`Expected string, got ${val.switch().name}`);
+  });
 }
 
 export function scValToAddress(val: xdr.ScVal): string {
-  if (val.switch().name === "scvAddress") {
-    return val.address().toString();
-  }
-  throw new Error(`Expected address, got ${val.switch().name}`);
+  return debugWrap("scValToAddress", val, () => {
+    if (val.switch().name === "scvAddress") {
+      return Address.fromScAddress(val.address()).toString();
+    }
+    throw new Error(`Expected address, got ${val.switch().name}`);
+  });
 }
 
 export function scValToVecU8(val: xdr.ScVal): number[] {
-  if (val.switch().name === "scvVec") {
-    return val.vec()!.map((v) => scValToU32(v));
-  }
-  throw new Error(`Expected vec, got ${val.switch().name}`);
+  return debugWrap("scValToVecU8", val, () => {
+    if (val.switch().name === "scvVec") {
+      return val.vec()!.map((v) => scValToU32(v));
+    }
+    throw new Error(`Expected vec, got ${val.switch().name}`);
+  });
 }
 
 // SEP-24 Anchor integration for INR on/off ramp

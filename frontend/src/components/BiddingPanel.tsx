@@ -54,7 +54,7 @@ export default function BiddingPanel({
     try {
       const commitment = await computeCommitment(amount, nonce);
 
-      await commitBid(commitment);
+      await commitBid(groupId, commitment);
 
       setPhase("committed");
       toast.success("Bid committed! Remember your bid amount — you must reveal it later.");
@@ -64,7 +64,7 @@ export default function BiddingPanel({
     } finally {
       setCommitting(false);
     }
-  }, [connected, address, bidAmount, onBidCommitted]);
+  }, [connected, address, bidAmount, onBidCommitted, groupId]);
 
   const handleReveal = useCallback(async () => {
     if (!connected || !address) {
@@ -79,7 +79,7 @@ export default function BiddingPanel({
 
     setRevealing(true);
     try {
-      await revealBid(savedAmount, savedNonce);
+      await revealBid(groupId, savedAmount, savedNonce);
 
       setPhase("revealed");
       toast.success("Bid revealed! Waiting for payout execution.");
@@ -89,7 +89,7 @@ export default function BiddingPanel({
     } finally {
       setRevealing(false);
     }
-  }, [connected, address, savedAmount, savedNonce, onBidRevealed]);
+  }, [connected, address, savedAmount, savedNonce, onBidRevealed, groupId]);
 
   if (!connected) {
     return (
