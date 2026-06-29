@@ -23,14 +23,14 @@ export default function GroupDetailPage() {
 
   useEffect(() => {
     if (connected && groupId) {
-      fetchGroupInfo();
-      fetchMembers();
+      fetchGroupInfo().catch((err) => console.error("Error fetching group info:", err));
+      fetchMembers().catch((err) => console.error("Error fetching members:", err));
     }
   }, [connected, groupId, fetchGroupInfo, fetchMembers]);
 
   useEffect(() => {
     if (groupInfo && groupInfo.current_cycle > 0) {
-      fetchCycleState(groupInfo.current_cycle);
+      fetchCycleState(groupInfo.current_cycle).catch((err) => console.error("Error fetching cycle state:", err));
     }
   }, [groupInfo, fetchCycleState]);
 
