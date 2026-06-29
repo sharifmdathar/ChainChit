@@ -17,8 +17,12 @@ export default function Sep24Ramp() {
     setDepositing(true);
     try {
       const url = await initiateSep24Deposit(address, depositAmount);
-      window.open(url, "_blank", "width=600,height=800");
-      toast.success("Deposit flow opened in new window");
+      const popup = window.open(url, "_blank", "width=600,height=800");
+      if (!popup || popup.closed || typeof popup.closed === "undefined") {
+        window.location.href = url;
+      } else {
+        toast.success("Deposit flow opened in new window");
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Deposit failed");
     } finally {
@@ -31,8 +35,12 @@ export default function Sep24Ramp() {
     setWithdrawing(true);
     try {
       const url = await initiateSep24Withdraw(address, withdrawAmount);
-      window.open(url, "_blank", "width=600,height=800");
-      toast.success("Withdrawal flow opened in new window");
+      const popup = window.open(url, "_blank", "width=600,height=800");
+      if (!popup || popup.closed || typeof popup.closed === "undefined") {
+        window.location.href = url;
+      } else {
+        toast.success("Withdrawal flow opened in new window");
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Withdrawal failed");
     } finally {
