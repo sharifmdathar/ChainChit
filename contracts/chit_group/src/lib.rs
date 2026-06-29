@@ -842,6 +842,7 @@ impl ChitGroupContract {
     ) {
         let args = soroban_sdk::vec![
             env,
+            env.current_contract_address().to_val(),
             caller.to_val(),
             on_time.into_val(env),
         ];
@@ -857,7 +858,11 @@ impl ChitGroupContract {
         reputation_contract: &Address,
         caller: &Address,
     ) {
-        let args = soroban_sdk::vec![env, caller.to_val()];
+        let args = soroban_sdk::vec![
+            env,
+            env.current_contract_address().to_val(),
+            caller.to_val(),
+        ];
         env.invoke_contract::<()>(
             reputation_contract,
             &Symbol::new(env, "record_default"),
@@ -870,7 +875,11 @@ impl ChitGroupContract {
         reputation_contract: &Address,
         caller: &Address,
     ) {
-        let args = soroban_sdk::vec![env, caller.to_val()];
+        let args = soroban_sdk::vec![
+            env,
+            env.current_contract_address().to_val(),
+            caller.to_val(),
+        ];
         env.invoke_contract::<()>(
             reputation_contract,
             &Symbol::new(env, "record_bid_won"),
@@ -883,7 +892,11 @@ impl ChitGroupContract {
         reputation_contract: &Address,
         caller: &Address,
     ) {
-        let args = soroban_sdk::vec![env, caller.to_val()];
+        let args = soroban_sdk::vec![
+            env,
+            env.current_contract_address().to_val(),
+            caller.to_val(),
+        ];
         env.invoke_contract::<()>(
             reputation_contract,
             &Symbol::new(env, "record_group_cycle_completed"),
