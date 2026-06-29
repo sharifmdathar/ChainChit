@@ -190,11 +190,11 @@ export function addressToScVal(address: string): xdr.ScVal {
 }
 
 export function u64ToScVal(value: number): xdr.ScVal {
-  return xdr.ScVal.scvU64(new xdr.Uint64(BigInt(value)));
+  return xdr.ScVal.scvU64(new xdr.Uint64(BigInt(Math.round(value))));
 }
 
 export function u32ToScVal(value: number): xdr.ScVal {
-  return xdr.ScVal.scvU32(value);
+  return xdr.ScVal.scvU32(Math.round(value));
 }
 
 export function boolToScVal(value: boolean): xdr.ScVal {
