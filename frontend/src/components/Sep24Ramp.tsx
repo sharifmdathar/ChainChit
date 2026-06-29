@@ -20,8 +20,13 @@ export default function Sep24Ramp() {
     setDepositUrl(null);
     try {
       const url = await initiateSep24Deposit(address, depositAmount);
-      setDepositUrl(url);
-      toast.success("Deposit portal ready!");
+      const win = window.open(url, "_blank");
+      if (!win) {
+        toast.error("Popup blocked! Please allow popups or use the button below.");
+        setDepositUrl(url);
+      } else {
+        toast.success("Deposit portal opened in a new tab!");
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Deposit failed");
     } finally {
@@ -35,8 +40,13 @@ export default function Sep24Ramp() {
     setWithdrawUrl(null);
     try {
       const url = await initiateSep24Withdraw(address, withdrawAmount);
-      setWithdrawUrl(url);
-      toast.success("Withdrawal portal ready!");
+      const win = window.open(url, "_blank");
+      if (!win) {
+        toast.error("Popup blocked! Please allow popups or use the button below.");
+        setWithdrawUrl(url);
+      } else {
+        toast.success("Withdrawal portal opened in a new tab!");
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Withdrawal failed");
     } finally {
