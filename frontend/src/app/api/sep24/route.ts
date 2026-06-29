@@ -1,91 +1,77 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  Keypair,
-  TransactionBuilder,
-  Networks,
-} from "@stellar/stellar-sdk";
 
 const ANCHOR_DOMAIN = "https://testanchor.stellar.org";
 const SEP10_AUTH = `${ANCHOR_DOMAIN}/auth`;
 const SEP24_BASE = `${ANCHOR_DOMAIN}/sep24`;
-const DEMO_SECRET = "SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG";
-
-/**
- * SEP-10 authentication: get a challenge, sign it, receive a JWT.
- */
-async function getSep10Token(publicKey: string): Promise<string> {
-  // 1. Request challenge
-  const challengeRes = await fetch(
-    `${SEP10_AUTH}?account=${publicKey}`
-  );
-  if (!challengeRes.ok) {
-    throw new Error(`SEP-10 challenge failed: ${challengeRes.status}`);
-  }
-  const { transaction } = await challengeRes.json();
-
-  // 2. Sign challenge with demo keypair
-  const keypair = Keypair.fromSecret(DEMO_SECRET);
-  const tx = TransactionBuilder.fromXDR(
-    transaction,
-    Networks.TESTNET
-  );
-  tx.sign(keypair);
-
-  // 3. Submit signed challenge for JWT
-  const tokenRes = await fetch(SEP10_AUTH, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ transaction: tx.toXDR() }),
-  });
-  if (!tokenRes.ok) {
-    const text = await tokenRes.text();
-    throw new Error(`SEP-10 token exchange failed: ${tokenRes.status} ${text}`);
-  }
-  const { token } = await tokenRes.json();
-  return token;
-}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { type, amount, account } = body;
+    const { action } = body;
 
-    if (!account) {
-      return NextResponse.json({ error: "Account required" }, { status: 400 });
+    if (action === "get_challenge") {
+      const { account } = body;
+      if (!account) {
+        return NextResponse.json({ error: "Account required" }, { status: 400 });
+      }
+      const challengeRes = await fetch(`${SEP10_AUTH}?account=${account}`);
+      if (!challengeRes.ok) {
+        throw new Error(`SEP-10 challenge failed: ${challengeRes.status}`);
+      }
+      const data = await challengeRes.json();
+      return NextResponse.json(data);
     }
 
-    // Authenticate with the anchor via SEP-10
-    const jwt = await getSep10Token(account);
+    if (action === "submit_signed_challenge") {
+      const { transaction, type, amount, account } = body;
+      if (!transaction || !account) {
+        return NextResponse.json({ error: "Transaction and Account required" }, { status: 400 });
+      }
 
-    // Build SEP-24 interactive request
-    const endpoint =
-      type === "withdraw"
-        ? `${SEP24_BASE}/transactions/withdraw/interactive`
-        : `${SEP24_BASE}/transactions/deposit/interactive`;
+      // 1. Submit signed challenge for JWT
+      const tokenRes = await fetch(SEP10_AUTH, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaction }),
+      });
+      if (!tokenRes.ok) {
+        const text = await tokenRes.text();
+        throw new Error(`SEP-10 token exchange failed: ${tokenRes.status} ${text}`);
+      }
+      const { token } = await tokenRes.json();
 
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${jwt}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        asset_code: "USDC",
-        amount: amount || "10",
-        account,
-      }),
-    });
+      // 2. Build SEP-24 interactive request
+      const endpoint =
+        type === "withdraw"
+          ? `${SEP24_BASE}/transactions/withdraw/interactive`
+          : `${SEP24_BASE}/transactions/deposit/interactive`;
 
-    if (!response.ok) {
-      const text = await response.text();
-      return NextResponse.json(
-        { error: `Anchor responded ${response.status}: ${text}` },
-        { status: response.status }
-      );
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          asset_code: "USDC",
+          amount: amount || "10",
+          account,
+        }),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        return NextResponse.json(
+          { error: `Anchor responded ${response.status}: ${text}` },
+          { status: response.status }
+        );
+      }
+
+      const data = await response.json();
+      return NextResponse.json(data);
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Proxy error";
     console.error("SEP-24 proxy error:", message);

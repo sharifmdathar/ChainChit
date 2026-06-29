@@ -9,7 +9,7 @@ import {
   requestAccess as requestFreighterAccess,
   signTransaction as signFreighterTransaction,
 } from "@stellar/freighter-api";
-import { Address, Keypair, TransactionBuilder, rpc, Contract, xdr, Asset, Operation } from "@stellar/stellar-sdk";
+import { Address, Keypair, TransactionBuilder, rpc, Contract, xdr, Asset, Operation, Networks } from "@stellar/stellar-sdk";
 
 let kit: StellarWalletsKit | null = null;
 let activeAddress: string | null = null;
@@ -322,22 +322,58 @@ export async function initiateSep24Deposit(
   const sep24Url = getSep24Url();
   if (!sep24Url) throw new Error("SEP-24 anchor URL not configured");
 
-  const response = await fetch("/api/sep24", {
+  // Step 1: Request SEP-10 challenge XDR from proxy
+  const challengeRes = await fetch("/api/sep24", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      action: "get_challenge",
+      account: publicKey,
+    }),
+  });
+
+  if (!challengeRes.ok) {
+    const data = await challengeRes.json().catch(() => ({}));
+    throw new Error(data.error || `Failed to fetch challenge: ${challengeRes.statusText}`);
+  }
+
+  const { transaction } = await challengeRes.json();
+
+  // Step 2: Sign the challenge transaction
+  let signedTxXdr = "";
+  if (publicKey === "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR") {
+    // Mock signing
+    const keypair = Keypair.fromSecret("SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG");
+    const tx = TransactionBuilder.fromXDR(transaction, Networks.TESTNET);
+    tx.sign(keypair);
+    signedTxXdr = tx.toXDR();
+  } else {
+    // Real wallet signing
+    const res = await signFreighterTransaction(transaction, {
+      networkPassphrase: "Test SDF Network ; September 2015",
+    });
+    signedTxXdr = res.signedTxXdr;
+  }
+
+  // Step 3: Submit signed challenge to proxy to perform token exchange & get interactive URL
+  const submitRes = await fetch("/api/sep24", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "submit_signed_challenge",
+      transaction: signedTxXdr,
       type: "deposit",
       amount,
       account: publicKey,
     }),
   });
 
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.error || `SEP-24 deposit initiation failed: ${response.statusText}`);
+  if (!submitRes.ok) {
+    const data = await submitRes.json().catch(() => ({}));
+    throw new Error(data.error || `Failed to submit challenge: ${submitRes.statusText}`);
   }
 
-  const data = await response.json();
+  const data = await submitRes.json();
   return data.url || data.attributes?.interactive_customer_info_needed?.url;
 }
 
@@ -348,22 +384,58 @@ export async function initiateSep24Withdraw(
   const sep24Url = getSep24Url();
   if (!sep24Url) throw new Error("SEP-24 anchor URL not configured");
 
-  const response = await fetch("/api/sep24", {
+  // Step 1: Request SEP-10 challenge XDR from proxy
+  const challengeRes = await fetch("/api/sep24", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      action: "get_challenge",
+      account: publicKey,
+    }),
+  });
+
+  if (!challengeRes.ok) {
+    const data = await challengeRes.json().catch(() => ({}));
+    throw new Error(data.error || `Failed to fetch challenge: ${challengeRes.statusText}`);
+  }
+
+  const { transaction } = await challengeRes.json();
+
+  // Step 2: Sign the challenge transaction
+  let signedTxXdr = "";
+  if (publicKey === "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR") {
+    // Mock signing
+    const keypair = Keypair.fromSecret("SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG");
+    const tx = TransactionBuilder.fromXDR(transaction, Networks.TESTNET);
+    tx.sign(keypair);
+    signedTxXdr = tx.toXDR();
+  } else {
+    // Real wallet signing
+    const res = await signFreighterTransaction(transaction, {
+      networkPassphrase: "Test SDF Network ; September 2015",
+    });
+    signedTxXdr = res.signedTxXdr;
+  }
+
+  // Step 3: Submit signed challenge to proxy to perform token exchange & get interactive URL
+  const submitRes = await fetch("/api/sep24", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "submit_signed_challenge",
+      transaction: signedTxXdr,
       type: "withdraw",
       amount,
       account: publicKey,
     }),
   });
 
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.error || `SEP-24 withdrawal initiation failed: ${response.statusText}`);
+  if (!submitRes.ok) {
+    const data = await submitRes.json().catch(() => ({}));
+    throw new Error(data.error || `Failed to submit challenge: ${submitRes.statusText}`);
   }
 
-  const data = await response.json();
+  const data = await submitRes.json();
   return data.url || data.attributes?.interactive_customer_info_needed?.url;
 }
 
