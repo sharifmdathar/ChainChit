@@ -150,7 +150,7 @@ export default function CreateGroupPage() {
             <p className="text-chit-muted text-sm">
               Pool size per cycle: <span className="text-chit-text font-bold">
                 {contribution && numMembers
-                  ? `${(Number(contribution) * Number(numMembers) / 1_000_000).toFixed(2)} USDC`
+                  ? `${(Number(contribution) * Number(numMembers)).toFixed(2)} USDC`
                   : "—"}
               </span>
             </p>
