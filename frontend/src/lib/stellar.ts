@@ -9,7 +9,7 @@ import {
   requestAccess as requestFreighterAccess,
   signTransaction as signFreighterTransaction,
 } from "@stellar/freighter-api";
-import { Address, Keypair, TransactionBuilder, rpc, Contract, xdr } from "@stellar/stellar-sdk";
+import { Address, Keypair, TransactionBuilder, rpc, Contract, xdr, Asset, Operation } from "@stellar/stellar-sdk";
 
 let kit: StellarWalletsKit | null = null;
 let activeAddress: string | null = null;
@@ -365,6 +365,30 @@ export async function initiateSep24Withdraw(
 
   const data = await response.json();
   return data.url || data.attributes?.interactive_customer_info_needed?.url;
+}
+
+export async function addUsdcTrustline(): Promise<void> {
+  const publicKey = activeAddress;
+  if (!publicKey) throw new Error("Wallet not connected");
+
+  const server = getRpcServer();
+  const account = await server.getAccount(publicKey);
+  const networkPassphrase = getNetworkPassphrase();
+
+  const asset = new Asset(
+    "USDC",
+    "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+  );
+
+  const tx = new TransactionBuilder(account, {
+    fee: "100000",
+    networkPassphrase,
+  })
+    .addOperation(Operation.changeTrust({ asset }))
+    .setTimeout(60)
+    .build();
+
+  await signAndSendTransaction(tx.toXDR());
 }
 
 export const SUPPORTED_WALLETS = [

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
-import { initiateSep24Deposit, initiateSep24Withdraw, getSep24Url } from "@/lib/stellar";
+import { initiateSep24Deposit, initiateSep24Withdraw, getSep24Url, addUsdcTrustline } from "@/lib/stellar";
 import toast from "react-hot-toast";
 
 export default function Sep24Ramp() {
@@ -58,6 +58,24 @@ export default function Sep24Ramp() {
         Deposit fiat to receive USDC on-chain, or withdraw USDC back to your bank account.
         Powered by SEP-24 anchor integration.
       </p>
+
+      {connected && (
+        <div className="mb-4">
+          <button
+            onClick={async () => {
+              try {
+                await addUsdcTrustline();
+                toast.success("USDC Trustline established successfully!");
+              } catch (err: unknown) {
+                toast.error(err instanceof Error ? err.message : "Failed to establish trustline");
+              }
+            }}
+            className="btn-secondary text-xs py-1.5 px-3"
+          >
+            ⚙️ Add USDC Trustline (Freighter)
+          </button>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-4">
         {/* Deposit */}
