@@ -91,26 +91,28 @@ export async function getUserGroups(user: string): Promise<string[]> {
 // ChitGroup Contract
 // ===========================================================================
 
-export async function joinGroup(contractId: string): Promise<void> {
-  await invokeContract(contractId, "join_group", []);
+export async function joinGroup(contractId: string, caller: string): Promise<void> {
+  await invokeContract(contractId, "join_group", [addressToScVal(caller)]);
 }
 
-export async function startCollection(contractId: string): Promise<void> {
-  await invokeContract(contractId, "start_collection", []);
+export async function startCollection(contractId: string, caller: string): Promise<void> {
+  await invokeContract(contractId, "start_collection", [addressToScVal(caller)]);
 }
 
-export async function payContribution(contractId: string): Promise<void> {
-  await invokeContract(contractId, "pay_contribution", []);
+export async function payContribution(contractId: string, caller: string): Promise<void> {
+  await invokeContract(contractId, "pay_contribution", [addressToScVal(caller)]);
 }
 
-export async function commitBid(contractId: string, commitment: number[]): Promise<void> {
+export async function commitBid(contractId: string, caller: string, commitment: number[]): Promise<void> {
   await invokeContract(contractId, "commit_bid", [
+    addressToScVal(caller),
     vecU8ToScVal(commitment),
   ]);
 }
 
-export async function revealBid(contractId: string, amount: number, nonce: number): Promise<void> {
+export async function revealBid(contractId: string, caller: string, amount: number, nonce: number): Promise<void> {
   await invokeContract(contractId, "reveal_bid", [
+    addressToScVal(caller),
     u64ToScVal(amount),
     u64ToScVal(nonce),
   ]);
@@ -120,22 +122,24 @@ export async function executePayout(contractId: string): Promise<void> {
   await invokeContract(contractId, "execute_payout", []);
 }
 
-export async function advanceCycle(contractId: string): Promise<void> {
-  await invokeContract(contractId, "advance_cycle", []);
+export async function advanceCycle(contractId: string, caller: string): Promise<void> {
+  await invokeContract(contractId, "advance_cycle", [addressToScVal(caller)]);
 }
 
-export async function raiseDispute(contractId: string, reason: string): Promise<void> {
+export async function raiseDispute(contractId: string, caller: string, reason: string): Promise<void> {
   await invokeContract(contractId, "raise_dispute", [
+    addressToScVal(caller),
     stringToScVal(reason),
   ]);
 }
 
-export async function pauseGroup(contractId: string): Promise<void> {
-  await invokeContract(contractId, "pause", []);
+export async function pauseGroup(contractId: string, caller: string): Promise<void> {
+  await invokeContract(contractId, "pause", [addressToScVal(caller)]);
 }
 
-export async function unpauseGroup(contractId: string, resumeState: GroupState): Promise<void> {
+export async function unpauseGroup(contractId: string, caller: string, resumeState: GroupState): Promise<void> {
   await invokeContract(contractId, "unpause", [
+    addressToScVal(caller),
     stringToScVal(resumeState),
   ]);
 }
@@ -221,8 +225,11 @@ export async function isEstablished(address: string): Promise<boolean> {
 // Identity Contract
 // ===========================================================================
 
-export async function vouchFor(vouchee: string): Promise<void> {
-  await invokeContract(CONTRACTS.identity(), "vouch", [addressToScVal(vouchee)]);
+export async function vouchFor(caller: string, vouchee: string): Promise<void> {
+  await invokeContract(CONTRACTS.identity(), "vouch", [
+    addressToScVal(caller),
+    addressToScVal(vouchee),
+  ]);
 }
 
 export async function getAttestationScore(address: string): Promise<number> {
@@ -278,9 +285,10 @@ export async function getArbitrators(): Promise<string[]> {
 }
 
 export async function castVote(
-  disputeId: number, inFavor: boolean, decision: DisputeDecision
+  caller: string, disputeId: number, inFavor: boolean, decision: DisputeDecision
 ): Promise<void> {
   await invokeContract(CONTRACTS.dispute(), "cast_vote", [
+    addressToScVal(caller),
     u64ToScVal(disputeId),
     boolToScVal(inFavor),
     stringToScVal(decision),

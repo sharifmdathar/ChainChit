@@ -30,7 +30,7 @@ export default function DisputeModal({ dispute, onClose, isArbitrator, onVoted }
 
     setLoading(true);
     try {
-      await castVote(dispute.id, support, support ? selectedDecision : "Dismiss");
+      await castVote(address, dispute.id, support, support ? selectedDecision : "Dismiss");
       toast.success(support ? "Voted in favor" : "Voted against");
       onVoted?.();
       onClose();

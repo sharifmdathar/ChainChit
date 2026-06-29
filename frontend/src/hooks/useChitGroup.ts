@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useWallet } from "@/hooks/useWallet";
 import {
   getGroupInfo,
   getMembers,
@@ -36,6 +37,7 @@ interface UseChitGroupReturn {
 }
 
 export function useChitGroup(contractId: string): UseChitGroupReturn {
+  const { address } = useWallet();
   const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
   const [members, setMembers] = useState<string[]>([]);
   const [cycleState, setCycleState] = useState<CycleState | null>(null);
@@ -81,29 +83,29 @@ export function useChitGroup(contractId: string): UseChitGroupReturn {
   }, [withLoading, contractId]);
 
   const join = useCallback(async () => {
-    if (!contractId) return;
-    await withLoading(async () => { await joinGroup(contractId); });
-  }, [withLoading, contractId]);
+    if (!contractId || !address) return;
+    await withLoading(async () => { await joinGroup(contractId, address); });
+  }, [withLoading, contractId, address]);
 
   const start = useCallback(async () => {
-    if (!contractId) return;
-    await withLoading(async () => { await startCollection(contractId); });
-  }, [withLoading, contractId]);
+    if (!contractId || !address) return;
+    await withLoading(async () => { await startCollection(contractId, address); });
+  }, [withLoading, contractId, address]);
 
   const pay = useCallback(async () => {
-    if (!contractId) return;
-    await withLoading(async () => { await payContribution(contractId); });
-  }, [withLoading, contractId]);
+    if (!contractId || !address) return;
+    await withLoading(async () => { await payContribution(contractId, address); });
+  }, [withLoading, contractId, address]);
 
   const commit = useCallback(async (commitment: number[]) => {
-    if (!contractId) return;
-    await withLoading(async () => { await commitBid(contractId, commitment); });
-  }, [withLoading, contractId]);
+    if (!contractId || !address) return;
+    await withLoading(async () => { await commitBid(contractId, address, commitment); });
+  }, [withLoading, contractId, address]);
 
   const reveal = useCallback(async (amount: number, nonce: number) => {
-    if (!contractId) return;
-    await withLoading(async () => { await revealBid(contractId, amount, nonce); });
-  }, [withLoading, contractId]);
+    if (!contractId || !address) return;
+    await withLoading(async () => { await revealBid(contractId, address, amount, nonce); });
+  }, [withLoading, contractId, address]);
 
   const payout = useCallback(async () => {
     if (!contractId) return;
@@ -111,14 +113,14 @@ export function useChitGroup(contractId: string): UseChitGroupReturn {
   }, [withLoading, contractId]);
 
   const advance = useCallback(async () => {
-    if (!contractId) return;
-    await withLoading(async () => { await advanceCycle(contractId); });
-  }, [withLoading, contractId]);
+    if (!contractId || !address) return;
+    await withLoading(async () => { await advanceCycle(contractId, address); });
+  }, [withLoading, contractId, address]);
 
   const dispute = useCallback(async (reason: string) => {
-    if (!contractId) return;
-    await withLoading(async () => { await raiseDispute(contractId, reason); });
-  }, [withLoading, contractId]);
+    if (!contractId || !address) return;
+    await withLoading(async () => { await raiseDispute(contractId, address, reason); });
+  }, [withLoading, contractId, address]);
 
   return {
     groupInfo, members, cycleState, loading, error,

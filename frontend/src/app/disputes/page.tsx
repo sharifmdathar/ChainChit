@@ -129,7 +129,7 @@ export default function DisputesPage() {
               if (!raiseReason.trim()) { toast.error("Enter a reason"); return; }
               setRaising(true);
               try {
-                await raiseDispute(groupIdInput.trim(), raiseReason.trim());
+                await raiseDispute(groupIdInput.trim(), address!, raiseReason.trim());
                 toast.success("Dispute raised successfully!");
                 setRaiseReason("");
                 fetchAllDisputes();

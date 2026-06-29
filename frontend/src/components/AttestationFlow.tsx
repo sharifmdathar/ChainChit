@@ -63,7 +63,7 @@ export default function AttestationFlow({ targetAddress, onAttested }: Attestati
 
     setLoading(true);
     try {
-      await vouchFor(vouchee);
+      await vouchFor(address, vouchee);
       toast.success(`Vouched for ${shortenAddress(vouchee)}`);
       setVouchingFor("");
       onAttested?.();

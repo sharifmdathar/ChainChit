@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useWallet } from "@/hooks/useWallet";
 import { getDispute, getArbitrators, castVote } from "@/lib/contracts";
 import type { DisputeRecord, DisputeDecision } from "@/types";
 
@@ -15,6 +16,7 @@ interface UseDisputeReturn {
 }
 
 export function useDispute(): UseDisputeReturn {
+  const { address } = useWallet();
   const [dispute, setDispute] = useState<DisputeRecord | null>(null);
   const [arbitrators, setArbitrators] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,10 +51,11 @@ export function useDispute(): UseDisputeReturn {
   }, []);
 
   const vote = useCallback(async (disputeId: number, inFavor: boolean, decision: DisputeDecision) => {
+    if (!address) return;
     setLoading(true);
     setError(null);
     try {
-      await castVote(disputeId, inFavor, decision);
+      await castVote(address, disputeId, inFavor, decision);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Vote failed";
       setError(message);
@@ -60,7 +63,7 @@ export function useDispute(): UseDisputeReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [address]);
 
   return { dispute, arbitrators, loading, error, fetchDispute, fetchArbitrators, vote };
 }

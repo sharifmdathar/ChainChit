@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useWallet } from "@/hooks/useWallet";
 import {
   getAttestationScore, isAttested, getVouchors, getAttestationCount, vouchFor,
 } from "@/lib/contracts";
@@ -17,6 +18,7 @@ interface UseIdentityReturn {
 }
 
 export function useIdentity(): UseIdentityReturn {
+  const { address } = useWallet();
   const [attestationScore, setAttestationScore] = useState<number>(0);
   const [attested, setAttested] = useState<boolean>(false);
   const [vouchors, setVouchors] = useState<string[]>([]);
@@ -47,10 +49,11 @@ export function useIdentity(): UseIdentityReturn {
   }, []);
 
   const vouch = useCallback(async (vouchee: string) => {
+    if (!address) return;
     setLoading(true);
     setError(null);
     try {
-      await vouchFor(vouchee);
+      await vouchFor(address, vouchee);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Vouch failed";
       setError(message);
@@ -58,7 +61,7 @@ export function useIdentity(): UseIdentityReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [address]);
 
   return { attestationScore, attested, vouchors, attestationCount, loading, error, fetchAttestation, vouch };
 }
