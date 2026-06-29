@@ -136,6 +136,7 @@ export default function GroupDetailPage() {
           cycle={groupInfo.current_cycle}
           minReputation={groupInfo.min_reputation_for_bid}
           hasCommitment={cycleState && address ? !!cycleState.bids[address] : false}
+          isRevealed={cycleState && address ? !!cycleState.bids[address]?.revealed : false}
           onBidCommitted={() => { fetchGroupInfo(); fetchCycleState(groupInfo.current_cycle); }}
           onBidRevealed={() => { fetchGroupInfo(); fetchCycleState(groupInfo.current_cycle); }}
         />

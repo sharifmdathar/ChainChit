@@ -1,6 +1,4 @@
-"use client";
-
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { commitBid, revealBid } from "@/lib/contracts";
 import { computeCommitment } from "@/lib/utils";
@@ -11,6 +9,7 @@ interface BiddingPanelProps {
   cycle: number;
   minReputation: number;
   hasCommitment: boolean;
+  isRevealed: boolean;
   onBidCommitted?: () => void;
   onBidRevealed?: () => void;
 }
@@ -20,6 +19,7 @@ export default function BiddingPanel({
   cycle,
   minReputation,
   hasCommitment,
+  isRevealed,
   onBidCommitted,
   onBidRevealed,
 }: BiddingPanelProps) {
@@ -28,10 +28,37 @@ export default function BiddingPanel({
   const [committing, setCommitting] = useState(false);
   const [revealing, setRevealing] = useState(false);
   const [phase, setPhase] = useState<"input" | "committed" | "revealed">(
-    hasCommitment ? "committed" : "input"
+    isRevealed ? "revealed" : (hasCommitment ? "committed" : "input")
   );
   const [savedNonce, setSavedNonce] = useState<number | null>(null);
   const [savedAmount, setSavedAmount] = useState<number | null>(null);
+
+  // Synchronize phase with contract state props
+  useEffect(() => {
+    if (isRevealed) {
+      setPhase("revealed");
+    } else if (hasCommitment) {
+      setPhase("committed");
+    } else {
+      setPhase("input");
+    }
+  }, [hasCommitment, isRevealed]);
+
+  // Load saved bid from localStorage on mount or address/cycle change
+  useEffect(() => {
+    if (!address) return;
+    const storageKey = `bid-${groupId}-${cycle}-${address}`;
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSavedAmount(parsed.amount);
+        setSavedNonce(parsed.nonce);
+      } catch (e) {
+        console.error("Failed to parse saved bid from localStorage", e);
+      }
+    }
+  }, [groupId, cycle, address]);
 
   const handleCommit = useCallback(async () => {
     if (!connected || !address) {
@@ -56,6 +83,10 @@ export default function BiddingPanel({
 
       await commitBid(groupId, address, commitment);
 
+      // Persist bid data in localStorage so it survives page reloads
+      const storageKey = `bid-${groupId}-${cycle}-${address}`;
+      localStorage.setItem(storageKey, JSON.stringify({ amount, nonce }));
+
       setPhase("committed");
       toast.success("Bid committed! Remember your bid amount — you must reveal it later.");
       onBidCommitted?.();
@@ -64,7 +95,7 @@ export default function BiddingPanel({
     } finally {
       setCommitting(false);
     }
-  }, [connected, address, bidAmount, onBidCommitted, groupId]);
+  }, [connected, address, bidAmount, onBidCommitted, groupId, cycle]);
 
   const handleReveal = useCallback(async () => {
     if (!connected || !address) {
@@ -81,6 +112,10 @@ export default function BiddingPanel({
     try {
       await revealBid(groupId, address, savedAmount, savedNonce);
 
+      // Clean up localStorage on successful reveal
+      const storageKey = `bid-${groupId}-${cycle}-${address}`;
+      localStorage.removeItem(storageKey);
+
       setPhase("revealed");
       toast.success("Bid revealed! Waiting for payout execution.");
       onBidRevealed?.();
@@ -89,7 +124,7 @@ export default function BiddingPanel({
     } finally {
       setRevealing(false);
     }
-  }, [connected, address, savedAmount, savedNonce, onBidRevealed, groupId]);
+  }, [connected, address, savedAmount, savedNonce, onBidRevealed, groupId, cycle]);
 
   if (!connected) {
     return (
