@@ -18,7 +18,7 @@ export default function GroupDetailPage() {
   const {
     groupInfo, members, cycleState, loading,
     fetchGroupInfo, fetchMembers, fetchCycleState,
-    join, start, advance, dispute,
+    join, start, payout, advance, dispute,
   } = useChitGroup(groupId);
 
   useEffect(() => {
@@ -140,6 +140,29 @@ export default function GroupDetailPage() {
           onBidCommitted={() => { fetchGroupInfo(); fetchCycleState(groupInfo.current_cycle); }}
           onBidRevealed={() => { fetchGroupInfo(); fetchCycleState(groupInfo.current_cycle); }}
         />
+      )}
+
+      {groupInfo.state === "Bidding" && (
+        <div className="glass-card p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-2">Execute Payout</h3>
+          <p className="text-chit-muted text-sm mb-4">
+            Once all members have committed and revealed their bids, click below to calculate the winner and transfer the pool.
+          </p>
+          <button
+            onClick={() => {
+              payout()
+                .then(() => {
+                  toast.success("Payout executed successfully!");
+                  fetchGroupInfo();
+                  fetchCycleState(groupInfo.current_cycle);
+                })
+                .catch((e) => toast.error(e.message));
+            }}
+            className="btn-primary w-full"
+          >
+            Execute Payout
+          </button>
+        </div>
       )}
 
       {groupInfo.state === "Payout" && isAdmin && (

@@ -120,7 +120,12 @@ export default function BiddingPanel({
       toast.success("Bid revealed! Waiting for payout execution.");
       onBidRevealed?.();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Reveal failed");
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("Error(Contract, #20)") || msg.includes("#20")) {
+        toast.error("No bid commitment found for this account in this cycle. Please commit your bid first.");
+      } else {
+        toast.error(msg || "Reveal failed");
+      }
     } finally {
       setRevealing(false);
     }
