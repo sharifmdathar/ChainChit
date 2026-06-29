@@ -9,6 +9,7 @@ import Sep24Ramp from "@/components/Sep24Ramp";
 import { basisPointsToPercent } from "@/lib/utils";
 import { getUserGroups, getGroupInfo, getMembers } from "@/lib/contracts";
 import type { GroupInfo } from "@/types";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import toast from "react-hot-toast";
 
@@ -19,6 +20,7 @@ interface GroupWithMembers {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { connected, address } = useWallet();
   const { compositeScore, onTimeRatio, established, fetchScore } = useReputation();
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
@@ -119,7 +121,7 @@ export default function DashboardPage() {
               key={g.contractId}
               group={g.info}
               memberCount={g.memberCount}
-              onClick={() => {}}
+              onClick={() => router.push(`/group/${g.contractId}`)}
             />
           ))}
         </div>
