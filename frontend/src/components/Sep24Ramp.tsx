@@ -18,16 +18,21 @@ export default function Sep24Ramp() {
     if (!address || !depositAmount) return;
     setDepositing(true);
     setDepositUrl(null);
+
+    // Open blank window synchronously to bypass popup blocker
+    const win = window.open("about:blank", "_blank");
+
     try {
       const url = await initiateSep24Deposit(address, depositAmount);
-      const win = window.open(url, "_blank");
-      if (!win) {
-        toast.error("Popup blocked! Please allow popups or use the button below.");
-        setDepositUrl(url);
-      } else {
+      if (win) {
+        win.location.href = url;
         toast.success("Deposit portal opened in a new tab!");
+      } else {
+        setDepositUrl(url);
+        toast.error("Popup blocked! Please allow popups or use the button below.");
       }
     } catch (err: unknown) {
+      if (win) win.close();
       toast.error(err instanceof Error ? err.message : "Deposit failed");
     } finally {
       setDepositing(false);
@@ -38,16 +43,21 @@ export default function Sep24Ramp() {
     if (!address || !withdrawAmount) return;
     setWithdrawing(true);
     setWithdrawUrl(null);
+
+    // Open blank window synchronously to bypass popup blocker
+    const win = window.open("about:blank", "_blank");
+
     try {
       const url = await initiateSep24Withdraw(address, withdrawAmount);
-      const win = window.open(url, "_blank");
-      if (!win) {
-        toast.error("Popup blocked! Please allow popups or use the button below.");
-        setWithdrawUrl(url);
-      } else {
+      if (win) {
+        win.location.href = url;
         toast.success("Withdrawal portal opened in a new tab!");
+      } else {
+        setWithdrawUrl(url);
+        toast.error("Popup blocked! Please allow popups or use the button below.");
       }
     } catch (err: unknown) {
+      if (win) win.close();
       toast.error(err instanceof Error ? err.message : "Withdrawal failed");
     } finally {
       setWithdrawing(false);
