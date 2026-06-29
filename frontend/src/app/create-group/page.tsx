@@ -23,7 +23,7 @@ export default function CreateGroupPage() {
       return;
     }
 
-    const contribAmount = Number(contribution);
+    const contribAmount = Math.round(Number(contribution) * 1_000_000);
     const members = Number(numMembers);
     const cycles = Number(totalCycles);
     const minAtt = Number(minAttestation);
@@ -79,17 +79,22 @@ export default function CreateGroupPage() {
       <h1 className="text-2xl font-bold mb-6">Create a Chit Group</h1>
       <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4">
         <div>
-          <label className="block text-chit-muted text-sm mb-1">Contribution Amount (in USDC units)</label>
+          <label className="block text-chit-muted text-sm mb-1">Contribution Amount (in USDC)</label>
           <input
             type="number"
             value={contribution}
             onChange={(e) => setContribution(e.target.value)}
-            placeholder="e.g. 10000000 (10 USDC)"
-            min="1"
+            placeholder="e.g. 10"
+            step="any"
+            min="0.000001"
             required
             className="w-full px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
           />
-          <p className="text-chit-muted text-xs mt-1">Enter amount in USDC base units. 10 USDC = 10,000,000</p>
+          {contribution && (
+            <p className="text-emerald-400 text-xs mt-1">
+              Equivalent to {Math.round(Number(contribution) * 1_000_000).toLocaleString()} base units
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">

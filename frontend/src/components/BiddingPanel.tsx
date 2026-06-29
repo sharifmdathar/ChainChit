@@ -39,7 +39,7 @@ export default function BiddingPanel({
       return;
     }
 
-    const amount = Number(bidAmount);
+    const amount = Math.round(Number(bidAmount) * 1_000_000);
     if (amount <= 0) {
       toast.error("Enter a valid bid amount");
       return;
@@ -117,15 +117,21 @@ export default function BiddingPanel({
       {phase === "input" && (
         <div className="space-y-3">
           <div>
-            <label className="block text-chit-muted text-sm mb-1">Your Bid Amount (USDC units)</label>
+            <label className="block text-chit-muted text-sm mb-1">Your Bid Amount (in USDC)</label>
             <input
               type="number"
               value={bidAmount}
               onChange={(e) => setBidAmount(e.target.value)}
-              placeholder="e.g. 500000 (0.5 USDC)"
-              min="1"
+              placeholder="e.g. 0.5"
+              step="any"
+              min="0.000001"
               className="w-full px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
             />
+            {bidAmount && (
+              <p className="text-emerald-400 text-xs mt-1">
+                Equivalent to {Math.round(Number(bidAmount) * 1_000_000).toLocaleString()} base units
+              </p>
+            )}
             <p className="text-chit-muted text-xs mt-1">
               This is the fee you are willing to pay for early pool access. Lower = more competitive.
             </p>
