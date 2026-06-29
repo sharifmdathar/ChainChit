@@ -13,6 +13,26 @@ export default function Sep24Ramp() {
   const [withdrawing, setWithdrawing] = useState(false);
   const [depositUrl, setDepositUrl] = useState<string | null>(null);
   const [withdrawUrl, setWithdrawUrl] = useState<string | null>(null);
+  const [funding, setFunding] = useState(false);
+
+  const handleFaucet = useCallback(async () => {
+    if (!address) return;
+    setFunding(true);
+    try {
+      const res = await fetch("/api/faucet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      toast.success("50 Test USDC transferred to your wallet successfully!");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Faucet request failed");
+    } finally {
+      setFunding(false);
+    }
+  }, [address]);
 
   const handleDeposit = useCallback(async () => {
     if (!address || !depositAmount) return;
@@ -84,7 +104,7 @@ export default function Sep24Ramp() {
       </p>
 
       {connected && (
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap gap-2">
           <button
             onClick={async () => {
               try {
@@ -97,6 +117,14 @@ export default function Sep24Ramp() {
             className="btn-secondary text-xs py-1.5 px-3"
           >
             ⚙️ Add USDC Trustline (Freighter)
+          </button>
+
+          <button
+            onClick={handleFaucet}
+            disabled={funding}
+            className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border-none shadow-sm shadow-emerald-500/10"
+          >
+            🎁 {funding ? "Funding..." : "Get 50 Test USDC (Faucet)"}
           </button>
         </div>
       )}
