@@ -23,7 +23,7 @@ export default function CreateGroupPage() {
       return;
     }
 
-    const contribAmount = Math.round(Number(contribution) * 1_000_000);
+    const contribAmount = Math.round(Number(contribution) * 10_000_000);
     const members = Number(numMembers);
     const cycles = Number(totalCycles);
     const minAtt = Number(minAttestation);
@@ -92,7 +92,7 @@ export default function CreateGroupPage() {
           />
           {contribution && (
             <p className="text-emerald-400 text-xs mt-1">
-              Equivalent to {Math.round(Number(contribution) * 1_000_000).toLocaleString()} base units
+              Equivalent to {Math.round(Number(contribution) * 10_000_000).toLocaleString()} base units
             </p>
           )}
         </div>

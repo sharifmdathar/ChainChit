@@ -66,7 +66,7 @@ export default function BiddingPanel({
       return;
     }
 
-    const amount = Math.round(Number(bidAmount) * 1_000_000);
+    const amount = Math.round(Number(bidAmount) * 10_000_000);
     if (amount <= 0) {
       toast.error("Enter a valid bid amount");
       return;
@@ -169,7 +169,7 @@ export default function BiddingPanel({
             />
             {bidAmount && (
               <p className="text-emerald-400 text-xs mt-1">
-                Equivalent to {Math.round(Number(bidAmount) * 1_000_000).toLocaleString()} base units
+                Equivalent to {Math.round(Number(bidAmount) * 10_000_000).toLocaleString()} base units
               </p>
             )}
             <p className="text-chit-muted text-xs mt-1">
@@ -193,7 +193,7 @@ export default function BiddingPanel({
             <p className="text-chit-success text-sm font-medium">✓ Bid committed</p>
             {savedAmount !== null && (
               <p className="text-chit-muted text-xs mt-1">
-                Your bid: {(savedAmount / 1_000_000).toFixed(2)} USDC — reveal when ready.
+                Your bid: {(savedAmount / 10_000_000).toFixed(2)} USDC — reveal when ready.
               </p>
             )}
           </div>

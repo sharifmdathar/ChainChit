@@ -14,7 +14,7 @@ export function formatUsdc(amount: number): string {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 2,
-  }).format(amount / 1_000_000);
+  }).format(amount / 10_000_000);
 }
 
 export function formatInr(amount: number): string {
@@ -22,7 +22,7 @@ export function formatInr(amount: number): string {
     style: "currency",
     currency: "INR",
     minimumFractionDigits: 2,
-  }).format(amount / 1_000_000);
+  }).format(amount / 10_000_000);
 }
 
 export function basisPointsToPercent(bp: number): number {
