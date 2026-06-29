@@ -11,18 +11,17 @@ export default function Sep24Ramp() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [depositing, setDepositing] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [depositUrl, setDepositUrl] = useState<string | null>(null);
+  const [withdrawUrl, setWithdrawUrl] = useState<string | null>(null);
 
   const handleDeposit = useCallback(async () => {
     if (!address || !depositAmount) return;
     setDepositing(true);
+    setDepositUrl(null);
     try {
       const url = await initiateSep24Deposit(address, depositAmount);
-      const popup = window.open(url, "_blank", "width=600,height=800");
-      if (!popup || popup.closed || typeof popup.closed === "undefined") {
-        window.location.href = url;
-      } else {
-        toast.success("Deposit flow opened in new window");
-      }
+      setDepositUrl(url);
+      toast.success("Deposit portal ready!");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Deposit failed");
     } finally {
@@ -33,14 +32,11 @@ export default function Sep24Ramp() {
   const handleWithdraw = useCallback(async () => {
     if (!address || !withdrawAmount) return;
     setWithdrawing(true);
+    setWithdrawUrl(null);
     try {
       const url = await initiateSep24Withdraw(address, withdrawAmount);
-      const popup = window.open(url, "_blank", "width=600,height=800");
-      if (!popup || popup.closed || typeof popup.closed === "undefined") {
-        window.location.href = url;
-      } else {
-        toast.success("Withdrawal flow opened in new window");
-      }
+      setWithdrawUrl(url);
+      toast.success("Withdrawal portal ready!");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Withdrawal failed");
     } finally {
@@ -82,6 +78,58 @@ export default function Sep24Ramp() {
           >
             ⚙️ Add USDC Trustline (Freighter)
           </button>
+        </div>
+      )}
+
+      {depositUrl && (
+        <div className="mb-6 p-4 rounded-lg bg-emerald-950/20 border border-emerald-500/30 text-center animate-fade-in">
+          <h3 className="text-emerald-400 font-semibold text-sm mb-1">Deposit Portal Ready</h3>
+          <p className="text-chit-muted text-xs mb-3">
+            Click the button below to complete your mock deposit in a new browser tab.
+          </p>
+          <div className="flex justify-center gap-2">
+            <a
+              href={depositUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setDepositUrl(null)}
+              className="btn-primary text-xs py-2 px-4 inline-flex items-center gap-1.5"
+            >
+              🚀 Open Deposit Portal
+            </a>
+            <button
+              onClick={() => setDepositUrl(null)}
+              className="btn-secondary text-xs py-2 px-3"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {withdrawUrl && (
+        <div className="mb-6 p-4 rounded-lg bg-emerald-950/20 border border-emerald-500/30 text-center animate-fade-in">
+          <h3 className="text-emerald-400 font-semibold text-sm mb-1">Withdrawal Portal Ready</h3>
+          <p className="text-chit-muted text-xs mb-3">
+            Click the button below to complete your mock withdrawal in a new browser tab.
+          </p>
+          <div className="flex justify-center gap-2">
+            <a
+              href={withdrawUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setWithdrawUrl(null)}
+              className="btn-primary text-xs py-2 px-4 inline-flex items-center gap-1.5"
+            >
+              🚀 Open Withdrawal Portal
+            </a>
+            <button
+              onClick={() => setWithdrawUrl(null)}
+              className="btn-secondary text-xs py-2 px-3"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
