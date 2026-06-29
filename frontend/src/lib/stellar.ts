@@ -4,6 +4,11 @@ import {
   WalletNetwork,
   FreighterModule,
 } from "@creit.tech/stellar-wallets-kit";
+import {
+  isConnected as isFreighterConnected,
+  requestAccess as requestFreighterAccess,
+  signTransaction as signFreighterTransaction,
+} from "@stellar/freighter-api";
 import { Address, Keypair, TransactionBuilder, rpc, Contract, xdr } from "@stellar/stellar-sdk";
 
 let kit: StellarWalletsKit | null = null;
@@ -38,9 +43,26 @@ export function getNetwork(): WalletNetwork {
 }
 
 export async function connectWallet(walletId: string = FREIGHTER_ID): Promise<string> {
-  const address = "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR";
-  activeAddress = address;
-  return address;
+  if (walletId === "MOCK") {
+    const address = "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR";
+    activeAddress = address;
+    return address;
+  }
+
+  try {
+    const connected = await isFreighterConnected();
+    if (!connected) {
+      throw new Error("Freighter wallet not installed");
+    }
+    const res = await requestFreighterAccess();
+    activeAddress = res.address;
+    return res.address;
+  } catch (err) {
+    console.error("Freighter wallet connection failed, falling back to mock wallet:", err);
+    const address = "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR";
+    activeAddress = address;
+    return address;
+  }
 }
 
 export async function disconnectWallet(): Promise<void> {
@@ -49,6 +71,15 @@ export async function disconnectWallet(): Promise<void> {
 }
 
 export async function getPublicKey(): Promise<string | null> {
+  if (activeAddress) return activeAddress;
+  try {
+    const connected = await isFreighterConnected();
+    if (connected) {
+      const res = await requestFreighterAccess();
+      activeAddress = res.address;
+      return activeAddress;
+    }
+  } catch {}
   activeAddress = "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR";
   return activeAddress;
 }
@@ -57,10 +88,19 @@ export async function signAndSendTransaction(
   txXdr: string
 ): Promise<rpc.Api.SendTransactionResponse> {
   const networkPassphrase = getNetworkPassphrase();
-  const keypair = Keypair.fromSecret("SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG");
-  const tx = TransactionBuilder.fromXDR(txXdr, networkPassphrase);
-  tx.sign(keypair);
-  const signedTxXdr = tx.toXDR();
+  let signedTxXdr = txXdr;
+
+  if (activeAddress === "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR") {
+    const keypair = Keypair.fromSecret("SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG");
+    const tx = TransactionBuilder.fromXDR(txXdr, networkPassphrase);
+    tx.sign(keypair);
+    signedTxXdr = tx.toXDR();
+  } else {
+    const res = await signFreighterTransaction(txXdr, {
+      networkPassphrase,
+    });
+    signedTxXdr = res.signedTxXdr;
+  }
 
   const server = getRpcServer();
   const signedTx = TransactionBuilder.fromXDR(signedTxXdr, networkPassphrase);
