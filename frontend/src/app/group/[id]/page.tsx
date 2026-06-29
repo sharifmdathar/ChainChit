@@ -92,7 +92,15 @@ export default function GroupDetailPage() {
       {/* Actions based on state */}
       {groupInfo.state === "Forming" && !isMember && (
         <div className="glass-card p-6 mb-6">
-          <button onClick={() => { join().then(() => toast.success("Joined!")).catch((e) => toast.error(e.message)); }} className="btn-primary w-full">
+          <button onClick={() => { 
+            join()
+              .then(() => { 
+                toast.success("Joined!");
+                fetchMembers();
+                fetchGroupInfo();
+              })
+              .catch((e) => toast.error(e.message)); 
+          }} className="btn-primary w-full">
             Join This Group
           </button>
         </div>
@@ -100,7 +108,14 @@ export default function GroupDetailPage() {
 
       {groupInfo.state === "Forming" && isAdmin && members.length >= groupInfo.num_members && (
         <div className="glass-card p-6 mb-6">
-          <button onClick={() => { start().then(() => toast.success("Collection started!")).catch((e) => toast.error(e.message)); }} className="btn-primary w-full">
+          <button onClick={() => { 
+            start()
+              .then(() => { 
+                toast.success("Collection started!");
+                fetchGroupInfo();
+              })
+              .catch((e) => toast.error(e.message)); 
+          }} className="btn-primary w-full">
             Start Collection
           </button>
         </div>
@@ -128,7 +143,15 @@ export default function GroupDetailPage() {
 
       {groupInfo.state === "Payout" && isAdmin && (
         <div className="glass-card p-6 mb-6">
-          <button onClick={() => { advance().then(() => toast.success("Cycle advanced!")).catch((e) => toast.error(e.message)); }} className="btn-primary w-full">
+          <button onClick={() => { 
+            advance()
+              .then(() => { 
+                toast.success("Cycle advanced!");
+                fetchGroupInfo();
+                fetchCycleState(groupInfo.current_cycle);
+              })
+              .catch((e) => toast.error(e.message)); 
+          }} className="btn-primary w-full">
             Advance to Next Cycle
           </button>
         </div>
