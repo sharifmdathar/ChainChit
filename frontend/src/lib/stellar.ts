@@ -9,10 +9,33 @@ import {
   requestAccess as requestFreighterAccess,
   signTransaction as signFreighterTransaction,
 } from "@stellar/freighter-api";
-import { Address, Keypair, TransactionBuilder, rpc, Contract, xdr, Asset, Operation, Networks } from "@stellar/stellar-sdk";
+import { Address, Keypair, TransactionBuilder, rpc, Contract, xdr, Asset, Operation } from "@stellar/stellar-sdk";
 
 let kit: StellarWalletsKit | null = null;
 let activeAddress: string | null = null;
+
+// Mock wallet gating — enabled ONLY when explicitly opted in via env.
+// In production this defaults to OFF, ensuring no silent mock fallback.
+const MOCK_WALLET_ENABLED = process.env.NEXT_PUBLIC_ENABLE_MOCK_WALLET === "true";
+
+let _mockKeypair: Keypair | null = null;
+
+function getMockKeypair(): Keypair | null {
+  if (!MOCK_WALLET_ENABLED) return null;
+  if (_mockKeypair) return _mockKeypair;
+  const secret = process.env.NEXT_PUBLIC_MOCK_WALLET_SECRET;
+  if (!secret) return null;
+  try {
+    _mockKeypair = Keypair.fromSecret(secret);
+    return _mockKeypair;
+  } catch {
+    console.error("[MOCK] Invalid MOCK_WALLET_SECRET in env");
+    return null;
+  }
+}
+
+const MOCK_KEYPAIR: Keypair | null = getMockKeypair();
+const MOCK_ADDRESS: string | null = MOCK_KEYPAIR?.publicKey() ?? null;
 
 function getKit(): StellarWalletsKit {
   if (!kit) {
@@ -44,25 +67,22 @@ export function getNetwork(): WalletNetwork {
 
 export async function connectWallet(walletId: string = FREIGHTER_ID): Promise<string> {
   if (walletId === "MOCK") {
-    const address = "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR";
-    activeAddress = address;
-    return address;
+    if (!MOCK_ADDRESS) {
+      throw new Error(
+        "Mock wallet unavailable. Set NEXT_PUBLIC_ENABLE_MOCK_WALLET=true and NEXT_PUBLIC_MOCK_WALLET_SECRET."
+      );
+    }
+    activeAddress = MOCK_ADDRESS;
+    return MOCK_ADDRESS;
   }
 
-  try {
-    const connected = await isFreighterConnected();
-    if (!connected) {
-      throw new Error("Freighter wallet not installed");
-    }
-    const res = await requestFreighterAccess();
-    activeAddress = res.address;
-    return res.address;
-  } catch (err) {
-    console.error("Freighter wallet connection failed, falling back to mock wallet:", err);
-    const address = "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR";
-    activeAddress = address;
-    return address;
+  const connected = await isFreighterConnected();
+  if (!connected) {
+    throw new Error("Freighter wallet not installed or not connected");
   }
+  const res = await requestFreighterAccess();
+  activeAddress = res.address;
+  return res.address;
 }
 
 export async function disconnectWallet(): Promise<void> {
@@ -80,8 +100,7 @@ export async function getPublicKey(): Promise<string | null> {
       return activeAddress;
     }
   } catch {}
-  activeAddress = "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR";
-  return activeAddress;
+  return null;
 }
 
 export async function signAndSendTransaction(
@@ -90,10 +109,9 @@ export async function signAndSendTransaction(
   const networkPassphrase = getNetworkPassphrase();
   let signedTxXdr = txXdr;
 
-  if (activeAddress === "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR") {
-    const keypair = Keypair.fromSecret("SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG");
+  if (MOCK_KEYPAIR && activeAddress === MOCK_ADDRESS) {
     const tx = TransactionBuilder.fromXDR(txXdr, networkPassphrase);
-    tx.sign(keypair);
+    tx.sign(MOCK_KEYPAIR);
     signedTxXdr = tx.toXDR();
   } else {
     const res = await signFreighterTransaction(txXdr, {
@@ -150,12 +168,7 @@ export async function invokeContract(
     publicKey = await getPublicKey();
   }
   if (!publicKey) {
-    if (!sign) {
-      // Simulation fallback to admin address
-      publicKey = "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR";
-    } else {
-      throw new Error("Wallet not connected");
-    }
+    throw new Error("Wallet not connected");
   }
 
   const contract = getContract(contractId);
@@ -340,18 +353,14 @@ export async function initiateSep24Deposit(
   const { transaction } = await challengeRes.json();
 
   // Step 2: Sign the challenge transaction
+  const networkPassphrase = getNetworkPassphrase();
   let signedTxXdr = "";
-  if (publicKey === "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR") {
-    // Mock signing
-    const keypair = Keypair.fromSecret("SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG");
-    const tx = TransactionBuilder.fromXDR(transaction, Networks.TESTNET);
-    tx.sign(keypair);
+  if (MOCK_KEYPAIR && publicKey === MOCK_ADDRESS) {
+    const tx = TransactionBuilder.fromXDR(transaction, networkPassphrase);
+    tx.sign(MOCK_KEYPAIR);
     signedTxXdr = tx.toXDR();
   } else {
-    // Real wallet signing
-    const res = await signFreighterTransaction(transaction, {
-      networkPassphrase: "Test SDF Network ; September 2015",
-    });
+    const res = await signFreighterTransaction(transaction, { networkPassphrase });
     signedTxXdr = res.signedTxXdr;
   }
 
@@ -402,18 +411,14 @@ export async function initiateSep24Withdraw(
   const { transaction } = await challengeRes.json();
 
   // Step 2: Sign the challenge transaction
+  const networkPassphrase = getNetworkPassphrase();
   let signedTxXdr = "";
-  if (publicKey === "GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR") {
-    // Mock signing
-    const keypair = Keypair.fromSecret("SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG");
-    const tx = TransactionBuilder.fromXDR(transaction, Networks.TESTNET);
-    tx.sign(keypair);
+  if (MOCK_KEYPAIR && publicKey === MOCK_ADDRESS) {
+    const tx = TransactionBuilder.fromXDR(transaction, networkPassphrase);
+    tx.sign(MOCK_KEYPAIR);
     signedTxXdr = tx.toXDR();
   } else {
-    // Real wallet signing
-    const res = await signFreighterTransaction(transaction, {
-      networkPassphrase: "Test SDF Network ; September 2015",
-    });
+    const res = await signFreighterTransaction(transaction, { networkPassphrase });
     signedTxXdr = res.signedTxXdr;
   }
 
@@ -447,10 +452,8 @@ export async function addUsdcTrustline(): Promise<void> {
   const account = await server.getAccount(publicKey);
   const networkPassphrase = getNetworkPassphrase();
 
-  const asset = new Asset(
-    "USDC",
-    "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
-  );
+  const usdcIssuer = process.env.NEXT_PUBLIC_USDC_ISSUER || "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const asset = new Asset("USDC", usdcIssuer);
 
   const tx = new TransactionBuilder(account, {
     fee: "100000",

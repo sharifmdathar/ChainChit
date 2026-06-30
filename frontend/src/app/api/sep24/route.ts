@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const ANCHOR_DOMAIN = "https://testanchor.stellar.org";
+const ANCHOR_DOMAIN = process.env.ANCHOR_SEP24_URL || process.env.NEXT_PUBLIC_ANCHOR_SEP24_URL || "";
+if (!ANCHOR_DOMAIN) {
+  throw new Error("ANCHOR_SEP24_URL env var not configured");
+}
 const SEP10_AUTH = `${ANCHOR_DOMAIN}/auth`;
 const SEP24_BASE = `${ANCHOR_DOMAIN}/sep24`;
 

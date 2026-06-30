@@ -8,19 +8,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Address is required" }, { status: 400 });
     }
 
-    const secretKey =
-      process.env.MOCK_ACCOUNT_SECRET ||
-      "SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG";
+    const secretKey = process.env.MOCK_ACCOUNT_SECRET;
+    if (!secretKey) {
+      return NextResponse.json({ error: "MOCK_ACCOUNT_SECRET env var not configured" }, { status: 500 });
+    }
     const sourceKeypair = sdk.Keypair.fromSecret(secretKey);
     const sourceAddress = sourceKeypair.publicKey();
 
-    const networkPassphrase = "Test SDF Network ; September 2015";
-    const rpcUrl =
-      process.env.NEXT_PUBLIC_STELLAR_RPC_URL ||
-      "https://soroban-testnet.stellar.org";
-    const usdcContractId =
-      process.env.NEXT_PUBLIC_USDC_CONTRACT ||
-      "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
+    const network = process.env.NEXT_PUBLIC_NETWORK || "TESTNET";
+    const networkPassphrase =
+      network === "TESTNET"
+        ? "Test SDF Network ; September 2015"
+        : "Public Global Stellar Network ; September 2015";
+    const rpcUrl = process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "";
+    if (!rpcUrl) {
+      return NextResponse.json({ error: "NEXT_PUBLIC_STELLAR_RPC_URL env var not configured" }, { status: 500 });
+    }
+    const usdcContractId = process.env.NEXT_PUBLIC_USDC_CONTRACT;
+    if (!usdcContractId) {
+      return NextResponse.json({ error: "NEXT_PUBLIC_USDC_CONTRACT env var not configured" }, { status: 500 });
+    }
 
     console.log(
       `[FAUCET] Funding ${address} with 50 Soroban USDC from ${sourceAddress}...`

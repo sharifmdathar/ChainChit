@@ -1,33 +1,15 @@
 # ChainChit — On-Chain Chit Fund Platform on Stellar
 
-**Live Demo**: [chain-chit.vercel.app](https://chain-chit.vercel.app/)
+**Live Application**: [chain-chit.vercel.app](https://chain-chit.vercel.app/)
+
+**Demo Video**: *[Watch on Youtube](https://youtu.be/un31dgbHZ48)*
+[![Demo Video](https://img.youtube.com/vi/un31dgbHZ48/maxresdefault.jpg)](https://www.youtube.com/watch?v=un31dgbHZ48)
 
 A production-ready decentralized chit fund (committee/rotating savings) platform built on Stellar Soroban smart contracts with a Next.js frontend.
 
 ## What is a Chit Fund?
 
 A chit fund is a rotating savings scheme where a group of members contribute a fixed amount each cycle. One member wins the pooled amount each cycle through a competitive bidding process. The lowest unique bid wins — incentivizing participants to bid the smallest fee they're willing to accept for early pool access.
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────┐
-│                  Next.js Frontend               │
-│  (Stellar Wallets Kit · Soroban RPC · SEP-24)   │
-└──────────┬──────────┬──────────┬────────────────┘
-           │          │          │
-    ┌──────┴──┐ ┌─────┴───┐ ┌────┴─────┐
-    │ ChitGroup│ │Identity │ │ Dispute  │
-    │ Contract │ │Contract │ │ Contract │
-    └──────┬──┘ └────┬────┘ └────┬─────┘
-           │         │           │
-           └─────────┼───────────┘
-                     │
-              ┌──────┴──────┐
-              │  Reputation │
-              │   Contract  │
-              └─────────────┘
-```
 
 ### Smart Contracts
 
@@ -46,14 +28,6 @@ A chit fund is a rotating savings scheme where a group of members contribute a f
 - **Multi-Sig Disputes**: 3-of-5 arbitrator panel with automatic threshold resolution and on-chain enforcement.
 - **Emergency Pause**: Admin-controlled circuit breaker halts all state transitions.
 - **SEP-24 INR Ramp**: Anchor integration for bank-to-USDC deposits and withdrawals.
-
-## Demo
-
-**Live Application**: [chain-chit.vercel.app](https://chain-chit.vercel.app/)
-
-**Demo Video**: *[Placeholder — link will be added after upload to YouTube]*
-
-**Pitch Deck**: [ChainChit_Pitch_Deck.pptx](docs/ChainChit_Pitch_Deck.pptx)
 
 ## On-Chain Activity
 
@@ -89,10 +63,17 @@ Network: **Stellar Testnet** (Soroban RPC: `https://soroban-testnet.stellar.org`
 
 ## Screenshots
 
-> *Screenshots to be added:*
-> - Wallet connected state
-> - Balance display
-> - Successful testnet transaction with hash
+### Dashboard
+![Dashboard](docs/images/DASHBOARD.webp)
+
+### Freighter Wallet with USDC
+![Balance](docs/images/BALANCE.png)
+
+### Analytics & Monitoring
+![Analytics](docs/images/ANALYTICS.webp)
+
+### Stellar Expert Page of Deployed Contract 
+![Stellar Expert](docs/images/STELLAR_EXPERT.png)
 
 ## Quick Start
 
