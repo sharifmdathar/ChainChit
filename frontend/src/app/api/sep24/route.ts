@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const ANCHOR_DOMAIN = process.env.ANCHOR_SEP24_URL || process.env.NEXT_PUBLIC_ANCHOR_SEP24_URL || "";
-if (!ANCHOR_DOMAIN) {
-  throw new Error("ANCHOR_SEP24_URL env var not configured");
+function getAnchorEndpoints(): { auth: string; base: string } {
+  const domain = process.env.ANCHOR_SEP24_URL || process.env.NEXT_PUBLIC_ANCHOR_SEP24_URL || "";
+  if (!domain) {
+    throw new Error("ANCHOR_SEP24_URL env var not configured");
+  }
+  return { auth: `${domain}/auth`, base: `${domain}/sep24` };
 }
-const SEP10_AUTH = `${ANCHOR_DOMAIN}/auth`;
-const SEP24_BASE = `${ANCHOR_DOMAIN}/sep24`;
 
 export async function POST(req: NextRequest) {
   try {
+    const { auth: SEP10_AUTH, base: SEP24_BASE } = getAnchorEndpoints();
     const body = await req.json();
     const { action } = body;
 
