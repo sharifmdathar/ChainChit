@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { connectWallet, disconnectWallet, getPublicKey, getNetwork } from "@/lib/stellar";
 import { SUPPORTED_WALLETS } from "@/lib/stellar";
 import type { WalletState } from "@/types";
@@ -33,7 +33,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     network: getNetwork() as unknown as "PUBLIC" | "TESTNET" | "FUTURENET",
   });
 
+  const hasChecked = useRef(false);
+
   useEffect(() => {
+    if (hasChecked.current) return;
+    hasChecked.current = true;
+
     getPublicKey().then((addr) => {
       if (addr) {
         setState((prev) => ({ ...prev, address: addr, connected: true }));
