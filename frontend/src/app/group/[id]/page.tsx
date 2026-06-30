@@ -92,48 +92,105 @@ export default function GroupDetailPage() {
   const isAdmin = address === groupInfo.admin;
   const isMember = members.includes(address || "");
 
+  const STATES_SEQUENCE = ["Forming", "Collecting", "Bidding", "Payout", "Completed"];
+  const currentStepIndex = STATES_SEQUENCE.indexOf(groupInfo.state);
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="glass-card p-6 mb-6">
-        <div className="flex items-start justify-between mb-4">
+    <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in-up">
+      {/* State Stepper Timeline */}
+      <div className="glass-card p-5 mb-6 border border-white/[0.04] overflow-x-auto">
+        <div className="flex items-center justify-between min-w-[500px] px-4">
+          {STATES_SEQUENCE.map((s, idx) => {
+            const isCompleted = idx < currentStepIndex;
+            const isActive = idx === currentStepIndex;
+            return (
+              <div key={s} className="flex items-center flex-1 last:flex-initial">
+                <div className="flex flex-col items-center gap-1.5 relative">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border transition-all duration-500 z-10 ${
+                    isActive 
+                      ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/30 ring-4 ring-indigo-500/20" 
+                      : isCompleted 
+                        ? "bg-emerald-500/10 border-emerald-500 text-emerald-400" 
+                        : "bg-slate-900 border-white/[0.08] text-slate-500"
+                  }`}>
+                    {isCompleted ? "✓" : idx + 1}
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                    isActive ? "text-indigo-400" : isCompleted ? "text-emerald-400" : "text-slate-500"
+                  }`}>
+                    {s}
+                  </span>
+                </div>
+                {idx < STATES_SEQUENCE.length - 1 && (
+                  <div className={`h-[2px] flex-1 mx-2 transition-all duration-500 ${
+                    idx < currentStepIndex ? "bg-emerald-500" : "bg-white/[0.08]"
+                  }`} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Main Info Card */}
+      <div className="glass-card p-6 mb-6 border border-white/[0.04]">
+        <div className="flex flex-col md:flex-row items-start justify-between gap-4 mb-6 border-b border-white/[0.05] pb-5">
           <div>
-            <div className="flex items-center gap-2">
-              <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${getStateColor(groupInfo.state)}`}>
+            <div className="flex items-center gap-3">
+              <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${getStateColor(groupInfo.state)}`}>
                 {groupInfo.state}
               </span>
               {isMember && groupInfo.state !== "Completed" && (
                 <button
                   onClick={() => setIsDisputeModalOpen(true)}
-                  className="btn-secondary text-xs px-2.5 py-0.5 flex items-center gap-1 border-chit-warning/30 hover:border-chit-warning/60 text-chit-warning bg-chit-warning/5"
+                  className="btn-secondary text-[10px] py-1 px-2.5 flex items-center gap-1.5 border-amber-500/20 hover:border-amber-500/50 text-amber-400 bg-amber-500/5"
                 >
-                  ⚠️ Raise Dispute
+                  <span className="text-xs">⚠️</span> Raise Dispute
                 </button>
               )}
             </div>
-            <h1 className="text-2xl font-bold mt-2">Group {shortenAddress(groupId, 8)}</h1>
+            <div className="flex items-center gap-2 mt-3">
+              <h1 className="text-2xl font-black text-slate-100 tracking-tight">
+                Pool {shortenAddress(groupId, 8)}
+              </h1>
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(groupId);
+                  toast.success("Contract address copied!");
+                }}
+                className="text-slate-500 hover:text-slate-300 transition-colors p-1"
+                title="Copy Contract ID"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold">{formatUsdc(groupInfo.contribution_amount * groupInfo.num_members)}</p>
-            <p className="text-chit-muted text-xs">Pool per cycle</p>
+          <div className="text-left md:text-right">
+            <p className="text-3xl font-black text-slate-100 tracking-tight">
+              {formatUsdc(groupInfo.contribution_amount * groupInfo.num_members)}
+            </p>
+            <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-0.5">Prize Pool Per Cycle</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <p className="text-chit-muted text-xs">Contribution</p>
-            <p className="font-medium">{formatUsdc(groupInfo.contribution_amount)}</p>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 text-sm">
+          <div className="p-3 rounded-xl bg-slate-900/30 border border-white/[0.02]">
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Cycle Contribution</p>
+            <p className="font-semibold text-slate-200">{formatUsdc(groupInfo.contribution_amount)}</p>
           </div>
-          <div>
-            <p className="text-chit-muted text-xs">Members</p>
-            <p className="font-medium">{members.length}/{groupInfo.num_members}</p>
+          <div className="p-3 rounded-xl bg-slate-900/30 border border-white/[0.02]">
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Members Enrolled</p>
+            <p className="font-semibold text-slate-200">{members.length} / {groupInfo.num_members}</p>
           </div>
-          <div>
-            <p className="text-chit-muted text-xs">Cycle</p>
-            <p className="font-medium">{groupInfo.current_cycle}/{groupInfo.total_cycles}</p>
+          <div className="p-3 rounded-xl bg-slate-900/30 border border-white/[0.02]">
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Current Active Cycle</p>
+            <p className="font-semibold text-slate-200">{groupInfo.current_cycle} / {groupInfo.total_cycles}</p>
           </div>
-          <div>
-            <p className="text-chit-muted text-xs">Min Attestation</p>
-            <p className="font-medium">{groupInfo.min_attestation_score}</p>
+          <div className="p-3 rounded-xl bg-slate-900/30 border border-white/[0.02]">
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Min Attestation Req.</p>
+            <p className="font-semibold text-slate-200">{groupInfo.min_attestation_score}</p>
           </div>
         </div>
       </div>

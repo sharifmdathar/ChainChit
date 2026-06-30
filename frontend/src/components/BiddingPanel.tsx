@@ -140,79 +140,120 @@ export default function BiddingPanel({
   }
 
   return (
-    <div className="glass-card p-6 space-y-4">
-      <h3 className="text-lg font-semibold">Commit-Reveal Bidding</h3>
-      <p className="text-chit-muted text-sm">
-        Cycle {cycle}: Place your bid using the commit-reveal scheme.
-        Your bid is hidden until reveal phase — lowest unique bid wins the pool.
-      </p>
+    <div className="glass-card p-6 space-y-5 border border-white/[0.04] animate-fade-in-up">
+      <div>
+        <h3 className="text-xl font-bold text-slate-100 tracking-tight mb-1">Commit-Reveal Bidding</h3>
+        <p className="text-slate-400 text-sm leading-relaxed">
+          Cycle {cycle}: Bids are submitted cryptographically hidden. Once all members commit, bids are revealed. The lowest unique bid wins the cycle pool.
+        </p>
+      </div>
 
       {minReputation > 0 && (
-        <p className="text-xs text-chit-warning">
-          Minimum reputation of {minReputation} bps required to bid.
-        </p>
+        <div className="px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-amber-400">
+          ⚠️ Minimum reputation of {minReputation} bps is required to participate in this bid.
+        </div>
       )}
+
+      {/* Interactive visual steps indicator */}
+      <div className="grid grid-cols-3 gap-3 border-t border-b border-white/[0.05] py-4 my-2">
+        <div className="flex flex-col items-center gap-1.5 text-center">
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] border ${
+            phase === "input" ? "bg-indigo-600 border-indigo-500 text-white shadow-sm shadow-indigo-600/30" : "bg-emerald-500/15 border-emerald-500 text-emerald-400"
+          }`}>
+            {phase === "input" ? "1" : "✓"}
+          </div>
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${phase === "input" ? "text-indigo-400" : "text-emerald-400"}`}>1. Commit</span>
+        </div>
+        
+        <div className="flex flex-col items-center gap-1.5 text-center">
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] border ${
+            phase === "committed" 
+              ? "bg-indigo-600 border-indigo-500 text-white shadow-sm shadow-indigo-600/30" 
+              : phase === "revealed" 
+                ? "bg-emerald-500/15 border-emerald-500 text-emerald-400"
+                : "bg-slate-900 border-white/[0.05] text-slate-600"
+          }`}>
+            {phase === "revealed" ? "✓" : "2"}
+          </div>
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${phase === "committed" ? "text-indigo-400" : phase === "revealed" ? "text-emerald-400" : "text-slate-500"}`}>2. Reveal</span>
+        </div>
+
+        <div className="flex flex-col items-center gap-1.5 text-center">
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] border ${
+            phase === "revealed" ? "bg-indigo-600 border-indigo-500 text-white shadow-sm shadow-indigo-600/30 animate-pulse" : "bg-slate-900 border-white/[0.05] text-slate-600"
+          }`}>
+            3
+          </div>
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${phase === "revealed" ? "text-indigo-400 animate-pulse" : "text-slate-500"}`}>3. Payout</span>
+        </div>
+      </div>
 
       {/* Commit Phase */}
       {phase === "input" && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
-            <label className="block text-chit-muted text-sm mb-1">Your Bid Amount (in USDC)</label>
+            <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+              Your Secret Bid Amount (USDC)
+            </label>
             <input
               type="number"
               value={bidAmount}
               onChange={(e) => setBidAmount(e.target.value)}
-              placeholder="e.g. 0.5"
+              placeholder="e.g. 0.50"
               step="any"
               min="0.000001"
-              className="w-full px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-white/[0.08] text-slate-100 placeholder-slate-600 focus:border-indigo-500 outline-none text-sm transition-all"
             />
             {bidAmount && (
-              <p className="text-emerald-400 text-xs mt-1">
+              <p className="text-emerald-400 text-xs font-semibold mt-1.5">
                 Equivalent to {Math.round(Number(bidAmount) * 10_000_000).toLocaleString()} base units
               </p>
             )}
-            <p className="text-chit-muted text-xs mt-1">
-              This is the fee you are willing to pay for early pool access. Lower = more competitive.
+            <p className="text-slate-500 text-xs mt-2 leading-relaxed">
+              * Note: The lower your bid, the more competitive it is to win the pool earlier, but you will pay this amount as a fee.
             </p>
           </div>
           <button
             onClick={handleCommit}
             disabled={committing}
-            className="btn-primary w-full"
+            className="btn-primary w-full py-3"
           >
-            {committing ? "Committing..." : "Commit Bid"}
+            {committing ? "Submitting Secret Commitment..." : "Submit Secret Bid"}
           </button>
         </div>
       )}
 
       {/* Committed: waiting to reveal */}
       {phase === "committed" && (
-        <div className="space-y-3">
-          <div className="p-3 rounded-lg bg-stellar-600/5 border border-stellar-600/20">
-            <p className="text-chit-success text-sm font-medium">✓ Bid committed</p>
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/20 shadow-inner">
+            <p className="text-indigo-400 text-sm font-bold flex items-center gap-1.5">
+              <span>✓</span> Secret Bid Committed
+            </p>
             {savedAmount !== null && (
-              <p className="text-chit-muted text-xs mt-1">
-                Your bid: {(savedAmount / 10_000_000).toFixed(2)} USDC — reveal when ready.
+              <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">
+                Your local cached bid of <span className="text-slate-200 font-semibold">{(savedAmount / 10_000_000).toFixed(2)} USDC</span> is ready to be revealed. Please click the button below to submit the decryption nonce.
               </p>
             )}
           </div>
           <button
             onClick={handleReveal}
             disabled={revealing}
-            className="btn-primary w-full"
+            className="btn-primary w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 border-none shadow-sm shadow-emerald-500/10"
           >
-            {revealing ? "Revealing..." : "Reveal Bid"}
+            {revealing ? "Submitting Reveal Key..." : "Reveal Secret Bid"}
           </button>
         </div>
       )}
 
       {/* Revealed */}
       {phase === "revealed" && (
-        <div className="p-3 rounded-lg bg-chit-success/5 border border-chit-success/20">
-          <p className="text-chit-success text-sm font-medium">✓ Bid revealed</p>
-          <p className="text-chit-muted text-xs mt-1">
-            Waiting for all bids to be revealed and payout execution.
+        <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 shadow-inner">
+          <p className="text-emerald-400 text-sm font-bold flex items-center gap-1.5">
+            <span>✓</span> Bid Successfully Revealed
+          </p>
+          <p className="text-slate-400 text-xs mt-1.5 leading-relaxed">
+            Your bid has been decrypted and recorded on-chain. Waiting for other members to reveal before payout computation.
           </p>
         </div>
       )}

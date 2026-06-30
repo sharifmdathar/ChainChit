@@ -36,30 +36,50 @@ export function ContributionFlow({ groupId, contributionAmount, cycle, onPaid }:
   };
 
   return (
-    <div className="glass-card p-6">
-      <h3 className="text-lg font-semibold mb-4">Pay Contribution — Cycle {cycle}</h3>
-      <p className="text-chit-muted text-sm mb-4">
-        Send your contribution of <span className="text-chit-text font-bold">{formatUsdc(contributionAmount)}</span> USDC to the group pool.
+    <div className="glass-card p-6 border border-white/[0.04] animate-fade-in-up">
+      <h3 className="text-xl font-bold text-slate-100 tracking-tight mb-2">Pay Cycle Contribution</h3>
+      <p className="text-slate-400 text-sm mb-5 leading-relaxed">
+        Submit your token contribution to the smart contract escrow for the current rotation savings cycle.
       </p>
+      
+      {/* Receipt Preview */}
+      <div className="p-4 rounded-xl bg-slate-900/30 border border-white/[0.02] text-xs space-y-2 mb-6">
+        <div className="flex justify-between text-slate-500 uppercase font-bold tracking-wider text-[10px]">
+          <span>Transaction Details</span>
+          <span>Escrow Target</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-slate-400">Contribution Amount:</span>
+          <span className="font-semibold text-slate-200">{formatUsdc(contributionAmount)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-slate-400">Current Cycle:</span>
+          <span className="font-semibold text-slate-200">Cycle {cycle}</span>
+        </div>
+      </div>
+
       {confirming ? (
         <div className="flex items-center gap-3">
           <button
             onClick={handlePay}
             disabled={loading}
-            className="btn-primary flex-1"
+            className="btn-primary flex-1 py-3"
           >
-            {loading ? "Confirming..." : "Confirm Payment"}
+            {loading ? "Approving Smart Contract..." : "Confirm Payment"}
           </button>
           <button
             onClick={() => setConfirming(false)}
-            className="btn-secondary"
+            className="btn-secondary py-3 px-6"
           >
             Cancel
           </button>
         </div>
       ) : (
-        <button onClick={() => setConfirming(true)} className="btn-primary w-full">
-          Pay {formatUsdc(contributionAmount)}
+        <button 
+          onClick={() => setConfirming(true)} 
+          className="btn-primary w-full py-3"
+        >
+          Authorize Payment of {formatUsdc(contributionAmount)}
         </button>
       )}
     </div>

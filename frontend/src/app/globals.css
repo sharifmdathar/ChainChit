@@ -2,46 +2,116 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
 
 :root {
-  --bg: #0a0e1a;
-  --card: #111827;
-  --border: #1f2937;
-  --accent: #5c7cfa;
+  --bg: #030712; /* Slate-950: deep, beautiful dark background */
+  --card: rgba(17, 24, 39, 0.4);
+  --border: rgba(31, 41, 55, 0.5);
+  --accent: #6366f1; /* Neon Violet/Indigo */
   --text: #f9fafb;
-  --muted: #6b7280;
+  --muted: #9ca3af;
+  --glow-color: rgba(99, 102, 241, 0.15);
 }
 
-* { box-sizing: border-box; }
+* { 
+  box-sizing: border-box; 
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: "Inter", system-ui, sans-serif;
   min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+h1, h2, h3, h4, .font-display {
+  font-family: "Sora", "Inter", sans-serif;
+  letter-spacing: -0.02em;
+}
 
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { 
+  background: rgba(31, 41, 55, 0.8); 
+  border-radius: 4px; 
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.3); }
+
+/* Premium Glassmorphism Card */
 .glass-card {
-  background: rgba(17, 24, 39, 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(31, 41, 55, 0.6);
-  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.45);
+  backdrop-filter: blur(16px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 10px 40px rgba(99, 102, 241, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(99, 102, 241, 0.2), 0 0 10px rgba(99, 102, 241, 0.1); 
+    border-color: rgba(99, 102, 241, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.4), 0 0 25px rgba(99, 102, 241, 0.2); 
+    border-color: rgba(99, 102, 241, 0.6);
+  }
 }
-.animate-pulse-glow { animation: pulse-glow 1.5s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 
-.btn {
-  @apply px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
-.btn-primary { @apply btn bg-stellar-600 hover:bg-stellar-700 text-white; }
-.btn-secondary { @apply btn bg-chit-card border border-chit-border hover:border-stellar-600 text-chit-text; }
-.btn-danger { @apply btn bg-red-600/20 border border-red-500/30 hover:bg-red-600/30 text-red-400; }
+
+.shimmer-bg {
+  background: linear-gradient(90deg, rgba(17,24,39,0) 0%, rgba(99,102,241,0.08) 50%, rgba(17,24,39,0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s infinite linear;
+}
+
+/* Button Refinement */
+.btn {
+  @apply px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] outline-none;
+}
+
+.btn-primary { 
+  @apply btn bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-600/25 hover:shadow-indigo-500/40 border border-indigo-500/30;
+}
+
+.btn-secondary { 
+  @apply btn bg-slate-900/60 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-800/80 text-slate-100 backdrop-blur-sm; 
+}
+
+.btn-danger { 
+  @apply btn bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600/20 hover:border-rose-500/40 text-rose-400 shadow-sm shadow-rose-500/5; 
+}
+

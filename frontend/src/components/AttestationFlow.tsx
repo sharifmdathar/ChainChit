@@ -76,43 +76,45 @@ export default function AttestationFlow({ targetAddress, onAttested }: Attestati
   }, [connected, address, vouchingFor, onAttested, fetchAttestationData]);
 
   return (
-    <div className="glass-card p-6 space-y-4">
-      <h3 className="text-lg font-semibold">Identity Attestation</h3>
-      <p className="text-chit-muted text-sm">
-        Vouch for trusted community members. Your reputation score determines your vouch weight.
-      </p>
+    <div className="glass-card p-6 space-y-5 border border-white/[0.04] animate-fade-in-up">
+      <div>
+        <h3 className="text-xl font-bold text-slate-100 tracking-tight mb-1">Identity Attestation</h3>
+        <p className="text-slate-400 text-sm leading-relaxed">
+          Vouch for trusted community members. Your own reputation score directly weights the trust weight of your attestation vouches.
+        </p>
+      </div>
 
       {/* Current attestation status */}
-      <div className="space-y-2">
+      <div className="space-y-4">
         {fetching ? (
-          <p className="text-chit-muted text-sm">Loading attestation data...</p>
+          <div className="shimmer-bg glass-card text-center py-6 text-xs text-slate-400">Loading attestation score records...</div>
         ) : (
-          <>
+          <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 rounded-lg bg-chit-bg text-center">
-                <p className="text-chit-muted text-xs">Score</p>
-                <p className="text-lg font-bold text-chit-text">{score ?? "—"}</p>
+              <div className="p-3.5 rounded-xl bg-slate-900/30 border border-white/[0.02] text-center">
+                <p className="text-slate-500 font-bold uppercase tracking-wider text-[9px] mb-1">Score</p>
+                <p className="text-xl font-black text-slate-200">{score ?? "—"}</p>
               </div>
-              <div className="p-3 rounded-lg bg-chit-bg text-center">
-                <p className="text-chit-muted text-xs">Vouches</p>
-                <p className="text-lg font-bold text-chit-text">{count ?? "—"}</p>
+              <div className="p-3.5 rounded-xl bg-slate-900/30 border border-white/[0.02] text-center">
+                <p className="text-slate-500 font-bold uppercase tracking-wider text-[9px] mb-1">Vouches</p>
+                <p className="text-xl font-black text-slate-200">{count ?? "—"}</p>
               </div>
-              <div className="p-3 rounded-lg bg-chit-bg text-center">
-                <p className="text-chit-muted text-xs">Status</p>
-                <p className={`text-lg font-bold ${attested ? "text-chit-success" : "text-chit-danger"}`}>
+              <div className="p-3.5 rounded-xl bg-slate-900/30 border border-white/[0.02] text-center">
+                <p className="text-slate-500 font-bold uppercase tracking-wider text-[9px] mb-1">Status</p>
+                <p className={`text-sm font-black uppercase tracking-wider mt-1 ${attested ? "text-emerald-400" : "text-rose-400"}`}>
                   {attested === null ? "—" : attested ? "Verified" : "Unverified"}
                 </p>
               </div>
             </div>
 
             {vouchors.length > 0 && (
-              <div>
-                <p className="text-chit-muted text-xs mb-1">Vouched by:</p>
-                <div className="flex flex-wrap gap-1">
+              <div className="p-4 rounded-xl bg-slate-900/20 border border-white/[0.02] space-y-2">
+                <p className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Vouched By Community Members</p>
+                <div className="flex flex-wrap gap-1.5">
                   {vouchors.map((v, i) => (
                     <span
                       key={i}
-                      className="px-2 py-0.5 text-xs rounded-full bg-stellar-600/10 text-stellar-600"
+                      className="px-2.5 py-0.5 text-[10px] font-mono rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 shadow-sm"
                     >
                       {shortenAddress(v)}
                     </span>
@@ -120,35 +122,40 @@ export default function AttestationFlow({ targetAddress, onAttested }: Attestati
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
 
         <button
           onClick={fetchAttestationData}
           disabled={fetching || !targetAddress}
-          className="btn-secondary text-sm"
+          className="btn-secondary text-xs py-2 px-4 flex items-center gap-1.5"
         >
-          Refresh
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89H18" />
+          </svg>
+          <span>Refresh Scores</span>
         </button>
       </div>
 
       {/* Vouch for someone */}
-      <div className="border-t border-chit-border pt-4">
-        <label className="block text-chit-muted text-sm mb-1">Vouch for address</label>
+      <div className="border-t border-white/[0.05] pt-5">
+        <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+          Vouch for community member
+        </label>
         <div className="flex gap-2">
           <input
             type="text"
             value={vouchingFor}
             onChange={(e) => setVouchingFor(e.target.value)}
-            placeholder="G..."
-            className="flex-1 px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm font-mono"
+            placeholder="Recipient account address (G...)"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-slate-950 border border-white/[0.08] text-slate-100 placeholder-slate-600 focus:border-indigo-500 outline-none text-sm font-mono transition-all"
           />
           <button
             onClick={handleVouch}
             disabled={loading || !connected}
-            className="btn-primary whitespace-nowrap"
+            className="btn-primary whitespace-nowrap px-6"
           >
-            {loading ? "Vouching..." : "Vouch"}
+            {loading ? "..." : "Vouch"}
           </button>
         </div>
       </div>

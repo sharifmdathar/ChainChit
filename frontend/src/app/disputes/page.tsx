@@ -78,51 +78,61 @@ export default function DisputesPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Disputes</h1>
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-100 tracking-tight">Arbitration Center</h1>
+          <p className="text-slate-400 text-sm mt-1">Review active disputes, lookup records, or file a smart contract complaint.</p>
+        </div>
         {isArbitrator && (
-          <span className="px-2 py-1 text-xs rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30">
-            Arbitrator
+          <span className="px-3 py-1 text-xs font-bold rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-sm animate-pulse">
+            Vetted Arbitrator
           </span>
         )}
       </div>
 
-      {/* Lookup by ID */}
-      <div className="glass-card p-4">
-        <div className="flex gap-2">
-          <input
-            type="number"
-            value={disputeIdInput}
-            onChange={(e) => setDisputeIdInput(e.target.value)}
-            placeholder="Dispute ID"
-            min="1"
-            className="flex-1 px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
-          />
-          <button onClick={handleLookup} className="btn-secondary">
-            Lookup
-          </button>
+      {/* Lookup & File Dispute side-by-side */}
+      <div className="grid md:grid-cols-3 gap-4">
+        {/* Lookup Card */}
+        <div className="md:col-span-1 glass-card p-5 border border-white/[0.04] flex flex-col justify-between">
+          <div>
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Dispute Lookup</h3>
+            <p className="text-slate-500 text-xs mb-3">Retrieve details of specific disputes on-chain by their record index.</p>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              value={disputeIdInput}
+              onChange={(e) => setDisputeIdInput(e.target.value)}
+              placeholder="Case ID"
+              min="1"
+              className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-white/[0.08] text-slate-100 placeholder-slate-600 focus:border-indigo-500 outline-none text-xs transition-all"
+            />
+            <button onClick={handleLookup} className="btn-secondary text-xs px-4 py-2">
+              Find
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Raise Dispute */}
-      <div className="glass-card p-4 space-y-3">
-        <h2 className="text-sm font-semibold text-chit-text">Raise Dispute</h2>
-        <div className="flex flex-col md:flex-row gap-2">
-          <input
-            type="text"
-            value={groupIdInput}
-            onChange={(e) => setGroupIdInput(e.target.value)}
-            placeholder="Group ID (contract address)"
-            className="flex-1 md:w-1/3 px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
-          />
-          <input
-            type="text"
-            value={raiseReason}
-            onChange={(e) => setRaiseReason(e.target.value)}
-            placeholder="Reason for dispute (e.g. member defaulted on cycle 1)"
-            className="flex-1 md:w-2/3 px-3 py-2 rounded-lg bg-chit-bg border border-chit-border text-chit-text focus:border-stellar-600 outline-none text-sm"
-          />
+        {/* Raise Dispute Form Card */}
+        <div className="md:col-span-2 glass-card p-5 border border-white/[0.04] space-y-3">
+          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">File Smart Dispute</h3>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <input
+              type="text"
+              value={groupIdInput}
+              onChange={(e) => setGroupIdInput(e.target.value)}
+              placeholder="Contract address (G...)"
+              className="px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/[0.08] text-slate-100 placeholder-slate-600 focus:border-indigo-500 outline-none text-xs font-mono transition-all"
+            />
+            <input
+              type="text"
+              value={raiseReason}
+              onChange={(e) => setRaiseReason(e.target.value)}
+              placeholder="Reason for dispute (default on cycle 2)"
+              className="px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/[0.08] text-slate-100 placeholder-slate-600 focus:border-indigo-500 outline-none text-xs transition-all"
+            />
+          </div>
           <button
             onClick={async () => {
               if (!groupIdInput.trim()) { toast.error("Enter a group ID"); return; }
@@ -140,48 +150,61 @@ export default function DisputesPage() {
               }
             }}
             disabled={raising || !raiseReason.trim()}
-            className="btn-primary whitespace-nowrap"
+            className="btn-primary w-full py-2.5 text-xs bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 border-none shadow-sm"
           >
-            {raising ? "Raising..." : "Raise Dispute"}
+            {raising ? "Submitting Dispute..." : "File Official Complaint"}
           </button>
         </div>
       </div>
 
-      {/* Dispute List */}
-      {loading ? (
-        <p className="text-chit-muted text-sm">Loading disputes...</p>
-      ) : disputes.length === 0 ? (
-        <div className="glass-card p-6 text-center">
-          <p className="text-chit-muted">No active disputes found.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {disputes.map((d) => (
-            <button
-              key={d.id}
-              onClick={() => setSelectedDispute(d)}
-              className="w-full glass-card p-4 text-left hover:border-stellar-600/50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-chit-text">Dispute #{d.id}</p>
-                  <p className="text-chit-muted text-sm">
-                    Cycle {d.cycle} · {shortenAddress(d.raiser)}
-                  </p>
+      {/* Dispute Logs List */}
+      <div>
+        <h2 className="text-lg font-bold text-slate-200 tracking-tight mb-4 flex items-center gap-2">
+          <span>Active Case Files</span>
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-900 border border-white/[0.05] text-slate-400">
+            {disputes.length}
+          </span>
+        </h2>
+        {loading ? (
+          <div className="shimmer-bg glass-card text-center py-8 text-slate-400">
+            <span className="animate-pulse">Loading arbitration case files...</span>
+          </div>
+        ) : disputes.length === 0 ? (
+          <div className="glass-card p-8 text-center text-slate-400">
+            No active disputes filed on this network.
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 gap-4">
+            {disputes.map((d) => (
+              <button
+                key={d.id}
+                onClick={() => setSelectedDispute(d)}
+                className="glass-card p-4 text-left transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] border border-white/[0.04] flex flex-col justify-between h-[110px]"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div>
+                    <p className="font-extrabold text-slate-200 text-sm">Dispute Case #{d.id}</p>
+                    <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-0.5">
+                      Cycle {d.cycle} · {shortenAddress(d.raiser, 5)}
+                    </p>
+                  </div>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
+                    d.status === "Open" ? "bg-amber-500/10 border-amber-500/30 text-amber-400" :
+                    d.status === "Voting" ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400" :
+                    d.status === "Resolved" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
+                    "bg-slate-900 border-white/[0.08] text-slate-500"
+                  }`}>
+                    {d.status}
+                  </span>
                 </div>
-                <span className={`px-2 py-1 text-xs rounded-full border ${
-                  d.status === "Open" ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" :
-                  d.status === "Voting" ? "bg-purple-500/20 text-purple-400 border-purple-500/30" :
-                  d.status === "Resolved" ? "bg-green-500/20 text-green-400 border-green-500/30" :
-                  "bg-gray-500/20 text-gray-400 border-gray-500/30"
-                }`}>
-                  {d.status}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+                <p className="text-slate-400 text-xs truncate w-full mt-3 border-t border-white/[0.03] pt-2">
+                  {d.reason}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Dispute Modal */}
       {selectedDispute && (
