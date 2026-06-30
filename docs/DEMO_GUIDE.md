@@ -1,76 +1,217 @@
-# ChainChit — Interactive Demo Video Guide
+# ChainChit — Demo Guide & Walkthrough
 
-Follow this step-by-step script to record a professional, high-quality 2-minute walkthrough demo video for your submission.
-
----
-
-## Preparation (Before Recording)
-
-1. **Reputation Bootstrapped**: We have already seeded your main admin wallet with a reputation history on testnet (3 payments on time, 2 completed cycles). Your profile will immediately display a high composite reputation score (~740) and a reputation tier badge.
-2. **Fund Your Wallet**: Make sure your Freighter wallet has both **XLM** (for gas/fees) and **USDC** (the group token).
-   - If you need USDC, click the **USDC On/Off Ramp** section on the dashboard to deposit test USDC via the SEP-24 interactive anchor, or fund it via the Stellar Laboratory.
-3. **Open the App**: Run the app locally (`bun dev` or `npm run dev`) and open `http://localhost:3000`.
+Complete walkthrough covering all features, pages, and submission requirements for the Stellar Builder Challenge.
 
 ---
 
-## Video Script & Steps
+## Quick Links
 
-### 1. Introduction & Wallet Connection (0:00 - 0:20)
-* **What to show**: The landing page/dashboard.
-* **What to do**:
-  1. Click **Connect Wallet** in the top right.
-  2. Select **Freighter** (or your preferred wallet).
-  3. Approve the connection.
-  4. Show your address and XLM/USDC balance displaying dynamically.
-* **What to say**: *"Welcome to ChainChit, the transparent on-chain rotating savings and chit fund platform on Stellar. I will connect my Freighter wallet. Once connected, my balances are fetched directly from the Stellar testnet."*
+| Resource | Link |
+|----------|------|
+| **Live App** | [chain-chit.vercel.app](https://chain-chit.vercel.app/) |
+| **Pitch Deck** | [ChainChit_Pitch_Deck.pptx](./ChainChit_Pitch_Deck.pptx) |
+| **Demo Video** | *[YouTube link — paste after upload]* |
+| **README** | [../README.md](../README.md) |
+| **Architecture** | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 
-### 2. User Profile & On-Chain Reputation (0:20 - 0:40)
-* **What to show**: The **Profile** page.
-* **What to do**:
-  1. Click **Profile** in the navigation bar.
-  2. Highlight the **Composite Reputation Score** (e.g., 740) and the **Reputation Badge**.
-  3. Explain that this score is calculated on-chain from payment ratios and completed cycles.
-* **What to say**: *"On the Profile page, you can see my composite reputation score. This is computed dynamically by our Reputation smart contract based on my payment history and completed cycles. High reputation reduces collateral requirements and allows participating in premium groups."*
+---
 
-### 3. Create a Chit Group (0:40 - 1:00)
-* **What to show**: The **Create Group** page.
-* **What to do**:
-  1. Click **Create Group** in the nav bar.
-  2. Fill out the form:
-     - **Contribution**: `10000000` (10 USDC).
-     - **Members**: `2` (set to 2 for quick simulation).
-     - **Cycles**: `2`.
-     - **Min Attestation Score**: `0` (so anyone can join for testing).
-     - **Min Reputation**: `0`.
-  3. Click **Create Group** and approve the Freighter transaction.
-  4. Show the success notification and the new group listed on the **Dashboard**.
-* **What to say**: *"Now, I will create a new chit group. I'll set the contribution to 10 USDC per cycle with 2 members. I'll sign the transaction to deploy and initialize the group parameters on-chain."*
+## 1. Wallet Setup
 
-### 4. Join, Contribute & Bidding Flow (1:00 - 1:30)
-* **What to show**: The **Group Details** page.
-* **What to do**:
-  1. Click on the newly created group.
-  2. Click **Start Collection** to open the cycle contribution phase.
-  3. Click **Pay Contribution** (approves USDC transfer from wallet to contract).
-  4. Go to the **Bidding Panel** at the bottom.
-  5. Enter a bid (e.g., `500000` which is 0.5 USDC) and click **Commit Bid** (submits the SHA-256 hash on-chain to hide your bid).
-  6. Wait/Simulate reveal phase: Click **Reveal Bid** and enter the same amount to verify the commitment on-chain.
-* **What to say**: *"Once the group is active, members contribute their cycle funds. I will contribute my 10 USDC. Next, I'll place a sealed bid in the commit-reveal phase. I submit a SHA-256 hash of my bid, then reveal it during the reveal phase. The lowest unique bid wins the pool."*
+### Install Freighter
+1. Install [Freighter Wallet](https://freighter.app/) browser extension (Chrome/Firefox/Edge)
+2. Create a new wallet or import existing
+3. Switch to **Stellar Testnet**:
+   - Open Freighter → Settings → Network → **Testnet**
 
-### 5. Multi-Sig Dispute Resolution (1:30 - 1:50)
-* **What to show**: The **Disputes** page.
-* **What to do**:
-  1. Click **Disputes** in the nav bar.
-  2. Click **Raise Dispute** on your group (simulating a member defaulting or disputing a cycle).
-  3. Show the open dispute record.
-  4. Click **Vote** inside the Dispute Modal (arbitrators vote on resolutions like `ForceDefault` or `ReversePayout`).
-* **What to say**: *"If a member defaults or a disagreement occurs, a dispute can be raised. This triggers our Multi-Sig Dispute contract where an arbitrator panel votes on-chain to resolve or dismiss the dispute."*
+### Fund Your Wallet
+Get test XLM + USDC from Stellar Friendbot:
+```
+https://friendbot.stellar.org?addr=YOUR_PUBLIC_KEY
+```
 
-### 6. SEP-24 Fiat Ramp & Conclusion (1:50 - 2:00)
-* **What to show**: The **USDC On/Off Ramp** section on the dashboard.
-* **What to do**:
-  1. Show the **Deposit → USDC** and **Withdraw USDC →** input fields.
-  2. Enter an amount (e.g., `10`) and click **Deposit** to show the interactive anchor window opening (Stellar testanchor UI).
-  3. Point out the transaction details: amount, fee, status (`pending_anchor`), and destination account.
-  4. Conclude the video.
-* **What to say**: *"Finally, we integrated a SEP-24 fiat on-ramp. Users can deposit funds directly into USDC on Stellar through an interactive anchor flow — complete with SEP-10 authentication handled automatically. This concludes the demo of ChainChit — bringing transparency and trust to rotating savings. Thank you!"*
+For USDC, use the **Get 50 Test USDC** button on the dashboard, or fund manually via Stellar Laboratory.
+
+---
+
+## 2. App Pages & Features
+
+### Landing Page (`/`)
+Wallet connect + feature highlights + how-it-works timeline.
+- Click **Connect Freighter** to connect
+- Shows connected address + network badge (Testnet)
+
+### Dashboard (`/dashboard`)
+Your command center:
+- **Member Profile card** — wallet address (copyable), reputation badge, established status
+- **Reputation Score card** — composite score (0–1000), on-time payment ratio bar
+- **Active Chit Pools card** — count of groups you've joined
+- **SEP-24 Ramp** — deposit/withdraw USDC via bank transfer (interactive anchor flow)
+- **Your Saving Groups** — list of groups you belong to, click any to enter details
+
+### Analytics & Monitoring (`/analytics`)
+**New — added for Level 4 Green Belt.** Real-time on-chain insights:
+- **Total Pooled Value** — USDC sum across all your groups
+- **Group States** — active vs completed, per-state breakdown badges
+- **Network Status** — live indicator, RPC endpoint, wallet network, network passphrase
+- **Reputation** — composite score, on-time percentage, established status
+- **Activity Log** — scrollable timeline of wallet connects, group loads, contract events (persisted in localStorage, survives page refreshes)
+- **Group Breakdown** — table with contract ID, state, members, cycle progress, contribution, pool size for every group
+
+### Profile (`/profile`)
+Detailed on-chain reputation:
+- Composite reputation score (0–1000)
+- On-time payment ratio
+- Payment history (on-time, total due, defaults)
+- Cycles completed, bids won
+- Disputes raised/lost
+- Established status badge
+
+### Create Group (`/create-group`)
+Form to deploy a new chit group:
+- **Contribution Amount** (USDC)
+- **Number of Members**
+- **Number of Cycles**
+- **Min Attestation Score** (anti-sybil gate)
+- **Min Reputation for Bidding**
+- Signs a factory contract call — group contract deployed dynamically
+
+### Group Details (`/group/[id]`)
+Full group lifecycle management:
+- **Group Info** — admin, state, contribution, current cycle, pool size
+- **Members list** — with payment status per cycle
+- **Admin controls** — Start Collection, Execute Payout, Advance Cycle, Pause/Unpause
+- **Contribution Flow** — Pay Contribution button
+- **Bidding Panel** — commit SHA-256 bid hash, reveal bid with amount + nonce
+- **Raise Dispute** button (opens dispute modal)
+
+### Disputes (`/disputes`)
+Multi-sig arbitration panel:
+- List of disputes with status (Open/Voting/Resolved/Dismissed)
+- Raise new dispute linked to a group
+- Arbitrators cast votes (in favor / against) with decision type
+- Dispute resolves automatically when threshold (3-of-5) is reached
+
+---
+
+## 3. On-Chain Activity (Real Testnet Users)
+
+13 testnet users actively participating across 2 chit groups:
+
+| Detail | Group A | Group B |
+|--------|---------|---------|
+| **Contract** | `CC2BGN75IGEWLOCRB3NLZO5HBHEH3NGBE6QNUONOVMGFMTEIPV2W5GER` | `CBWO3KSGJM7TXTKONLDELGGOPQ42XZZZBXW2LTOFK6YSYB4KUONGQILA` |
+| **Create Tx** | `32b2d0d53ba1778d9045cf3404002983f1c46e70a716b1f0930fc2c5821b3f5e` | `9bf22151414338b2e78e6d39f822a9b49eace3627bc68323d7c59e304ad2a035` |
+| **Members** | 10 | 3 |
+| **Contribution** | 5 USDC/cycle | 2.5 USDC/cycle |
+| **Cycles** | 3 | 6 |
+| **Verify** | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CC2BGN75IGEWLOCRB3NLZO5HBHEH3NGBE6QNUONOVMGFMTEIPV2W5GER) | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CBWO3KSGJM7TXTKONLDELGGOPQ42XZZZBXW2LTOFK6YSYB4KUONGQILA) |
+
+All wallets funded via Stellar Friendbot. Every join transaction is a real Soroban contract call on testnet.
+
+### View This Data in the App
+The groups were created with the admin wallet:
+```
+Public: GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR
+Secret: SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG
+```
+Import this secret into Freighter → connect → see all 2 groups + 13 users on dashboard + analytics.
+
+---
+
+## 4. Monitoring & Analytics
+
+| Feature | Where | What It Shows |
+|---------|-------|---------------|
+| **Vercel Analytics** | Vercel Dashboard | Page views, unique visitors, Core Web Vitals |
+| **In-App Analytics** | `/analytics` page | Pooled value, group states, network status, reputation |
+| **Activity Log** | `/analytics` page | Session event timeline (wallet, contract, group actions) |
+| **Error Tracking** | Toast notifications | Simulation errors, transaction failures, wallet errors |
+
+---
+
+## 5. Smart Contracts
+
+| Contract | Address | LOC | Purpose |
+|----------|---------|-----|---------|
+| **Factory** | `CAJBU4IDXR5PFHY3AKRDUS2LTRID7ONORUXJJYG5LDPTG2QMREINLF6V` | 165 | Dynamic group deployment |
+| **Reputation** | `CDA53WAWFZ2VVOXUUXNQWVETL3KX5DTZ4O6YWNFKJIGNKLBF3NZ5HGSR` | 674 | On-chain scoring |
+| **Identity** | `CAG3PALD7IHTXSJHIAVWWF2N6YICTMU2EO5JK5O3DC7HEJVU4L5JSSSL` | 416 | Sybil-resistant vouching |
+| **Dispute** | `CCX3JYBOO3LHIRKIDXTO755OBUL6W7GSZKPFNPWCTN3NNLZU2WX4OK3B` | 862 | Multi-sig arbitration |
+| **USDC** | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` | — | Testnet USDC token |
+
+All deployed on **Stellar Testnet** — Soroban RPC: `https://soroban-testnet.stellar.org`
+
+---
+
+## 6. Demo Video Script (2 minutes)
+
+### Scene 1: Landing & Connect (0:00 – 0:20)
+- Open `chain-chit.vercel.app`
+- Connect Freighter wallet
+- Show connected state with address + network badge
+
+### Scene 2: Dashboard & Profile (0:20 – 0:40)
+- Dashboard: reputation score, groups count, SEP-24 ramp
+- Profile page: composite score breakdown, payment history
+
+### Scene 3: Analytics & Monitoring (0:40 – 0:55)
+- Navigate to `/analytics`
+- Show pooled value, group states, live network indicator
+- Scroll activity log showing session events
+
+### Scene 4: Create & Manage a Group (0:55 – 1:20)
+- Create Group form → fill params → sign tx
+- Dashboard showing new group
+- Group details: info, members, current cycle
+
+### Scene 5: Bidding Flow (1:20 – 1:35)
+- Commit bid (SHA-256 hash submitted on-chain)
+- Reveal bid (verify commitment)
+- Show bid status
+
+### Scene 6: SEP-24 Fiat Ramp (1:35 – 1:50)
+- Dashboard → Deposit USDC
+- Interactive anchor window
+- Transaction status
+
+### Scene 7: Wrap Up (1:50 – 2:00)
+- Quick mention: dispute resolution, on-chain reputation, 13 testnet users active
+- Link to live app + GitHub repo
+
+---
+
+## 7. Screenshots Needed for Submission
+
+| # | Screenshot | Where to Capture |
+|---|------------|------------------|
+| 1 | Wallet connected state | Landing page after connect — show address + network badge |
+| 2 | Balance display | Dashboard — reputation score + groups count visible |
+| 3 | Successful testnet transaction | Group details after join/contribute/bid — show tx hash or toast |
+| 4 | Analytics dashboard | `/analytics` — show pooled value, group states, network status |
+| 5 | Activity feed | `/analytics` — scrollable event log with timestamps |
+| 6 | Mobile responsive UI | Resize browser to mobile viewport — show responsive layout |
+
+Save screenshots in `docs/screenshots/` and reference them in the README.
+
+---
+
+## 8. Submission Checklist
+
+### Level 4 — Green Belt
+- [x] **Live demo**: [chain-chit.vercel.app](https://chain-chit.vercel.app/)
+- [x] **Monitoring & analytics**: Vercel Analytics + in-app `/analytics` page
+- [x] **Mobile responsive**: Tailwind responsive breakpoints throughout
+- [x] **15+ commits**: 60+ commits
+- [x] **Contract deployment**: 5 contracts on testnet (addresses above)
+- [x] **13 testnet users**: Funded + joined groups with on-chain tx proofs
+- [ ] **Demo video**: Upload to YouTube → paste link in README
+- [ ] **Screenshots**: Capture + add to `docs/screenshots/`
+
+### Level 5 — Blue Belt
+- [x] **Pitch deck**: `docs/ChainChit_Pitch_Deck.pptx` (13 slides)
+- [x] **20+ commits**: 60+ commits
+- [ ] **50 testnet users**: Need 37 more funded wallets with interactions
+- [ ] **Google Form**: For user feedback collection
+- [ ] **Product improvements**: Based on feedback
+- [ ] **Demo video**: Full walkthrough recording

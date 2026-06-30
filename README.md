@@ -1,5 +1,7 @@
 # ChainChit — On-Chain Chit Fund Platform on Stellar
 
+**Live Demo**: [chain-chit.vercel.app](https://chain-chit.vercel.app/)
+
 A production-ready decentralized chit fund (committee/rotating savings) platform built on Stellar Soroban smart contracts with a Next.js frontend.
 
 ## What is a Chit Fund?
@@ -44,6 +46,53 @@ A chit fund is a rotating savings scheme where a group of members contribute a f
 - **Multi-Sig Disputes**: 3-of-5 arbitrator panel with automatic threshold resolution and on-chain enforcement.
 - **Emergency Pause**: Admin-controlled circuit breaker halts all state transitions.
 - **SEP-24 INR Ramp**: Anchor integration for bank-to-USDC deposits and withdrawals.
+
+## Demo
+
+**Live Application**: [chain-chit.vercel.app](https://chain-chit.vercel.app/)
+
+**Demo Video**: *[Placeholder — link will be added after upload to YouTube]*
+
+**Pitch Deck**: [ChainChit_Pitch_Deck.pptx](docs/ChainChit_Pitch_Deck.pptx)
+
+## On-Chain Activity
+
+13 testnet users have funded their wallets via Stellar Friendbot, joined chit groups, and are actively participating across 2 groups:
+
+| Detail | Group A | Group B |
+|--------|---------|---------|
+| **Contract** | `CC2BGN75IGEWLOCRB3NLZO5HBHEH3NGBE6QNUONOVMGFMTEIPV2W5GER` | `CBWO3KSGJM7TXTKONLDELGGOPQ42XZZZBXW2LTOFK6YSYB4KUONGQILA` |
+| **Create Tx** | `32b2d0d53ba1778d9045cf3404002983f1c46e70a716b1f0930fc2c5821b3f5e` | `9bf22151414338b2e78e6d39f822a9b49eace3627bc68323d7c59e304ad2a035` |
+| **Members** | 10 | 3 |
+| **Contribution** | 5 USDC/cycle | 2.5 USDC/cycle |
+| **Cycles** | 3 | 6 |
+| **Verify** | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CC2BGN75IGEWLOCRB3NLZO5HBHEH3NGBE6QNUONOVMGFMTEIPV2W5GER) | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CBWO3KSGJM7TXTKONLDELGGOPQ42XZZZBXW2LTOFK6YSYB4KUONGQILA) |
+
+## Contract Deployment (Testnet)
+
+| Contract | Address |
+|----------|---------|
+| **Factory** | `CAJBU4IDXR5PFHY3AKRDUS2LTRID7ONORUXJJYG5LDPTG2QMREINLF6V` |
+| **ChitGroup** | Deployed dynamically via factory |
+| **Reputation** | `CDA53WAWFZ2VVOXUUXNQWVETL3KX5DTZ4O6YWNFKJIGNKLBF3NZ5HGSR` |
+| **Identity** | `CAG3PALD7IHTXSJHIAVWWF2N6YICTMU2EO5JK5O3DC7HEJVU4L5JSSSL` |
+| **Dispute** | `CCX3JYBOO3LHIRKIDXTO755OBUL6W7GSZKPFNPWCTN3NNLZU2WX4OK3B` |
+| **USDC** | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
+
+Network: **Stellar Testnet** (Soroban RPC: `https://soroban-testnet.stellar.org`)
+
+## Monitoring & Analytics
+
+- **Vercel Analytics** — Page views and Core Web Vitals tracking (built-in with Vercel deployment)
+- **Error Monitoring** — Console error logging via `react-hot-toast` with structured error messages for simulation failures, transaction timeouts, and wallet errors
+- **Transaction Status** — On-chain transaction polling with status tracking (pending → success/fail) with full XDR error details
+
+## Screenshots
+
+> *Screenshots to be added:*
+> - Wallet connected state
+> - Balance display
+> - Successful testnet transaction with hash
 
 ## Quick Start
 

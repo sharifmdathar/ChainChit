@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { useReputation } from "@/hooks/useReputation";
 import { ReputationBadge } from "@/components/ReputationBadge";
@@ -19,18 +19,60 @@ interface GroupWithMembers {
   contractId: string;
 }
 
+interface ActivityEvent {
+  id: number;
+  type: "group" | "transaction" | "wallet" | "contract";
+  label: string;
+  detail: string;
+  timestamp: number;
+}
+
+let activityCounter = 0;
+
 export default function DashboardPage() {
   const router = useRouter();
   const { connected, address } = useWallet();
   const { compositeScore, onTimeRatio, established, fetchScore } = useReputation();
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState<ActivityEvent[]>([]);
+
+  const pushActivity = useCallback((type: ActivityEvent["type"], label: string, detail: string) => {
+    activityCounter += 1;
+    const event: ActivityEvent = {
+      id: activityCounter,
+      type,
+      label,
+      detail,
+      timestamp: Date.now(),
+    };
+    setActivities((prev) => [event, ...prev].slice(0, 50));
+    // Also store in localStorage for cross-page visibility
+    try {
+      const stored = JSON.parse(localStorage.getItem("chit_activity_log") || "[]");
+      stored.unshift(event);
+      if (stored.length > 100) stored.length = 100;
+      localStorage.setItem("chit_activity_log", JSON.stringify(stored));
+    } catch {}
+  }, []);
+
+  // Load saved activity log from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("chit_activity_log") || "[]");
+      if (Array.isArray(stored) && stored.length > 0) {
+        setActivities(stored.slice(0, 50));
+        activityCounter = stored[0].id;
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (connected && address) {
       fetchScore(address);
+      pushActivity("wallet", "Wallet Connected", shortenAddress(address));
     }
-  }, [connected, address, fetchScore]);
+  }, [connected, address, fetchScore, pushActivity]);
 
   useEffect(() => {
     async function loadGroups() {
@@ -54,15 +96,22 @@ export default function DashboardPage() {
         }
         
         setGroups(loadedGroups);
+        pushActivity("contract", "Groups Loaded", `${loadedGroups.length} groups found`);
+
+        // Log each group's state
+        for (const g of loadedGroups) {
+          pushActivity("group", `Group: ${shortenAddress(g.contractId)}`, g.info.state);
+        }
       } catch (e) {
         console.error(e);
         toast.error("Failed to load groups");
+        pushActivity("contract", "Groups Load Error", "Failed to fetch groups");
       } finally {
         setLoading(false);
       }
     }
     if (connected && address) loadGroups();
-  }, [connected, address]);
+  }, [connected, address, pushActivity]);
 
   if (!connected) {
     return (

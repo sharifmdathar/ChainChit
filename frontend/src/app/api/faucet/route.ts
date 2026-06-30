@@ -8,42 +8,89 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Address is required" }, { status: 400 });
     }
 
-    const server = new sdk.Horizon.Server("https://horizon-testnet.stellar.org");
-    const secretKey = process.env.MOCK_ACCOUNT_SECRET || "SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG";
+    const secretKey =
+      process.env.MOCK_ACCOUNT_SECRET ||
+      "SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG";
     const sourceKeypair = sdk.Keypair.fromSecret(secretKey);
     const sourceAddress = sourceKeypair.publicKey();
 
-    console.log(`[FAUCET] Funding ${address} from ${sourceAddress}...`);
-    const account = await server.loadAccount(sourceAddress);
+    const networkPassphrase = "Test SDF Network ; September 2015";
+    const rpcUrl =
+      process.env.NEXT_PUBLIC_STELLAR_RPC_URL ||
+      "https://soroban-testnet.stellar.org";
+    const usdcContractId =
+      process.env.NEXT_PUBLIC_USDC_CONTRACT ||
+      "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA";
 
-    const asset = new sdk.Asset(
-      "USDC",
-      "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+    console.log(
+      `[FAUCET] Funding ${address} with 50 Soroban USDC from ${sourceAddress}...`
     );
 
+    const server = new sdk.rpc.Server(rpcUrl, { allowHttp: false });
+    const account = await server.getAccount(sourceAddress);
+    const contract = new sdk.Contract(usdcContractId);
+
+    // 50 USDC with 7 decimals (matching classic Stellar asset decimals)
+    const amount = BigInt(50) * BigInt(10_000_000); // 500_000_000
+
     const tx = new sdk.TransactionBuilder(account, {
-      fee: sdk.BASE_FEE,
-      networkPassphrase: "Test SDF Network ; September 2015",
+      fee: "10000000",
+      networkPassphrase,
     })
       .addOperation(
-        sdk.Operation.payment({
-          destination: address,
-          asset: asset,
-          amount: "50.0",
-        })
+        contract.call(
+          "transfer",
+          sdk.Address.fromString(sourceAddress).toScVal(),
+          sdk.Address.fromString(address).toScVal(),
+          sdk.xdr.ScVal.scvI128(
+            new sdk.xdr.Int128Parts({
+              lo: new sdk.xdr.Uint64(amount),
+              hi: new sdk.xdr.Int64(0),
+            })
+          )
+        )
       )
       .setTimeout(60)
       .build();
 
-    tx.sign(sourceKeypair);
+    // Simulate to get footprint + auth + fee
+    const simResponse = await server.simulateTransaction(tx);
+    if (sdk.rpc.Api.isSimulationError(simResponse)) {
+      throw new Error(`Simulation error: ${simResponse.error}`);
+    }
 
-    const result = await server.submitTransaction(tx);
-    return NextResponse.json({ success: true, hash: result.hash });
+    // Assemble with simulation data, sign, submit
+    const assembledTx = sdk.rpc.assembleTransaction(tx, simResponse).build();
+    assembledTx.sign(sourceKeypair);
+
+    const sendResponse = await server.sendTransaction(assembledTx);
+    if (sendResponse.status === "ERROR") {
+      throw new Error(`Transaction failed: ${sendResponse.errorResult}`);
+    }
+
+    // Wait for confirmation
+    let pollResponse = await server.getTransaction(sendResponse.hash);
+    let attempts = 0;
+    while (pollResponse.status === "NOT_FOUND" && attempts < 20) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      pollResponse = await server.getTransaction(sendResponse.hash);
+      attempts++;
+    }
+
+    if (pollResponse.status === "FAILED") {
+      throw new Error(`Transaction reverted on chain: ${pollResponse.resultXdr}`);
+    }
+
+    return NextResponse.json({ success: true, hash: sendResponse.hash });
   } catch (err: any) {
     console.error("[FAUCET ERROR]", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : String(err) },
-      { status: 500 }
-    );
+
+    let message = err instanceof Error ? err.message : String(err);
+    if (message.includes("trustline entry is missing")) {
+      message =
+        "USDC trustline not found. Click 'Add USDC Trustline' button first, then try the faucet again.";
+    }
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

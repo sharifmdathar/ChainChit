@@ -3,6 +3,7 @@ import "./globals.css";
 import { WalletProvider } from "@/hooks/useWallet";
 import { Navbar } from "@/components/Navbar";
 import { Toaster } from "react-hot-toast";
+import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
   title: "ChainChit — Transparent On-Chain Chit Funds",
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }}
           />
         </WalletProvider>
+        <Analytics />
       </body>
     </html>
   );
