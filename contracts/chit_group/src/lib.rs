@@ -70,6 +70,7 @@ pub enum DataKey {
     Members,              // Vec<Address>
     Cycle(u32),           // CycleState
     MemberIndex(Address), // u32 — index in members vec
+    PrePauseState,        // GroupState — state active before emergency pause
 }
 
 // ---------------------------------------------------------------------------
@@ -636,10 +637,16 @@ impl ChitGroupContract {
         if info.state == GroupState::Completed {
             return Err(Error::AlreadyCompleted);
         }
+        if info.state == GroupState::Paused {
+            return Err(Error::Paused);
+        }
 
-        // Cross-contract call to Dispute contract
+        // Cross-contract call to Dispute contract.
+        // caller = this chit_group contract (authorized by factory);
+        // raiser = the member who raised the dispute.
         let args = soroban_sdk::vec![
             &env,
+            env.current_contract_address().to_val(),
             caller.to_val(),
             (info.current_cycle as u64).into_val(&env),
             reason.to_val(),
@@ -666,14 +673,22 @@ impl ChitGroupContract {
         if caller != info.admin {
             return Err(Error::NotAdmin);
         }
+        // Completed is terminal — a finished group must never be paused/resurrected.
+        if info.state == GroupState::Completed {
+            return Err(Error::AlreadyCompleted);
+        }
 
+        // Record the pre-pause state so unpause restores it exactly.
+        env.storage().instance().set(&DataKey::PrePauseState, &info.state);
         info.state = GroupState::Paused;
         env.storage().instance().set(&DataKey::GroupInfo, &info);
         Ok(())
     }
 
-    /// Unpause — admin only, returns to the state before pause.
-    pub fn unpause(env: Env, caller: Address, resume_state: GroupState) -> Result<(), Error> {
+    /// Unpause — admin only, restores the state that was active before pause.
+    /// The `resume_state` argument is kept for ABI compatibility but is ignored;
+    /// the recorded pre-pause state is authoritative.
+    pub fn unpause(env: Env, caller: Address, _resume_state: GroupState) -> Result<(), Error> {
         caller.require_auth();
 
         let mut info: GroupInfo = env
@@ -689,12 +704,18 @@ impl ChitGroupContract {
             return Err(Error::InvalidState);
         }
 
-        match resume_state {
+        let target: GroupState = env
+            .storage()
+            .instance()
+            .get(&DataKey::PrePauseState)
+            .ok_or(Error::InvalidState)?;
+
+        match target {
             GroupState::Forming
             | GroupState::Collecting
             | GroupState::Bidding
             | GroupState::Payout => {
-                info.state = resume_state;
+                info.state = target;
                 env.storage().instance().set(&DataKey::GroupInfo, &info);
                 Ok(())
             }
@@ -1117,13 +1138,14 @@ mod test {
     }
 
     #[test]
-    fn test_unpause() {
+    fn test_unpause_restores_pre_pause_state() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
         let (_, client) = init_contract(&env, &admin, &token, &reputation, &identity, &dispute);
 
         client.pause(&admin);
-        client.unpause(&admin, &GroupState::Forming);
+        // resume_state param ignored — stored pre-pause state (Forming) restored
+        client.unpause(&admin, &GroupState::Bidding);
         let info = client.get_group_info();
         assert_eq!(info.state, GroupState::Forming);
     }
@@ -1139,16 +1161,99 @@ mod test {
         client.unpause(&admin, &GroupState::Forming);
     }
 
+    // ------------------- Dispute wiring tests -------------------
+
+    #[contract]
+    pub struct MockDispute;
+
+    #[contracttype]
+    #[derive(Clone)]
+    enum MockKey {
+        Caller,
+        Raiser,
+    }
+
+    #[contractimpl]
+    impl MockDispute {
+        pub fn raise_dispute(
+            env: Env,
+            caller: Address,
+            raiser: Address,
+            _cycle: u64,
+            _reason: String,
+        ) -> u64 {
+            env.storage().instance().set(&MockKey::Caller, &caller);
+            env.storage().instance().set(&MockKey::Raiser, &raiser);
+            1
+        }
+    }
+
     #[test]
-    #[should_panic(expected = "Error(Contract, #2)")]
-    fn test_unpause_invalid_resume_state() {
+    fn test_raise_dispute_wiring() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (admin, token, reputation, identity, _) = setup_group(&env);
+        let dispute_id = env.register_contract(&Address::generate(&env), MockDispute);
+        let (contract_id, client) =
+            init_contract(&env, &admin, &token, &reputation, &identity, &dispute_id);
+
+        let member = Address::generate(&env);
+        env.as_contract(&contract_id, || {
+            let members: Vec<Address> = soroban_sdk::vec![&env, member.clone()];
+            env.storage().instance().set(&DataKey::Members, &members);
+            env.storage().instance().set(&DataKey::MemberIndex(member.clone()), &0_u32);
+        });
+        client.raise_dispute(&member, &String::from_str(&env, "fraud"));
+
+        let seen_caller: Address = env.as_contract(&dispute_id, || {
+            env.storage().instance().get(&MockKey::Caller).unwrap()
+        });
+        let seen_raiser: Address = env.as_contract(&dispute_id, || {
+            env.storage().instance().get(&MockKey::Raiser).unwrap()
+        });
+        assert_eq!(seen_caller, contract_id);
+        assert_eq!(seen_raiser, member);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #12)")]
+    fn test_raise_dispute_paused() {
         let env = Env::default();
         let (admin, token, reputation, identity, dispute) = setup_group(&env);
-        let (_, client) = init_contract(&env, &admin, &token, &reputation, &identity, &dispute);
+        let (contract_id, client) =
+            init_contract(&env, &admin, &token, &reputation, &identity, &dispute);
 
+        let member = Address::generate(&env);
+        env.as_contract(&contract_id, || {
+            let members: Vec<Address> = soroban_sdk::vec![&env, member.clone()];
+            env.storage().instance().set(&DataKey::Members, &members);
+            env.storage().instance().set(&DataKey::MemberIndex(member.clone()), &0_u32);
+        });
+
+        env.as_contract(&contract_id, || {
+            let mut info: GroupInfo = env.storage().instance().get(&DataKey::GroupInfo).unwrap();
+            info.state = GroupState::Paused;
+            env.storage().instance().set(&DataKey::GroupInfo, &info);
+        });
+
+        client.raise_dispute(&member, &String::from_str(&env, "fraud"));
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #24)")]
+    fn test_pause_completed_rejected() {
+        let env = Env::default();
+        let (admin, token, reputation, identity, dispute) = setup_group(&env);
+        let (contract_id, client) = init_contract(&env, &admin, &token, &reputation, &identity, &dispute);
+
+        env.as_contract(&contract_id, || {
+            let mut info: GroupInfo = env.storage().instance().get(&DataKey::GroupInfo).unwrap();
+            info.state = GroupState::Completed;
+            env.storage().instance().set(&DataKey::GroupInfo, &info);
+        });
+
+        // Completed is terminal — pause must be rejected
         client.pause(&admin);
-        // Cannot resume to Completed or Paused
-        client.unpause(&admin, &GroupState::Completed);
     }
 
     // ------------------- Update contracts tests -------------------
