@@ -55,6 +55,44 @@ A chit fund is a rotating savings scheme where a group of members contribute a f
 
 Network: **Stellar Testnet** (Soroban RPC: `https://soroban-testnet.stellar.org`)
 
+## Contract Deployment (Mainnet) — Level 6/7
+
+Deployment in progress. Addresses will be recorded here after `NETWORK=mainnet npx ts-node scripts/deploy.ts`.
+
+| Contract | Address |
+|----------|---------|
+| **Factory** | _pending_ |
+| **Reputation** | _pending_ |
+| **Identity** | _pending_ |
+| **Dispute** | _pending_ |
+| **USDC (Circle SAC)** | `CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75` |
+
+Network: **Stellar Mainnet** (Soroban RPC: `https://rpc.stellar.org`)
+
+## User Feedback
+
+We collect structured feedback from every user via a Google Form
+(name, email, wallet address, product rating 1–5). Responses are exported to an
+Excel sheet for analysis and record-keeping.
+
+- **Feedback form**: [Google Form](https://forms.google.com) — question template: [docs/FEEDBACK_FORM.md](docs/FEEDBACK_FORM.md)
+- **Responses (Excel)**: `docs/ChainChit_Feedback.xlsx` _(to be added after first export)_
+- **User ledger**: [docs/USERS.md](docs/USERS.md) — every onboarded user with on-chain proof
+- **Monthly growth report**: [docs/GROWTH_REPORT.md](docs/GROWTH_REPORT.md)
+
+## Improvement Plan (feedback-driven)
+
+How we evolve the product based on collected feedback. Every shipped iteration
+references the commit that implemented it.
+
+| # | Feedback theme | Improvement | Commit |
+|---|----------------|-------------|--------|
+| 1 | _(pending first feedback batch)_ | | |
+| 2 | | | |
+
+> Update this table after each feedback export. New items land on the top,
+> completed items keep their commit links as permanent evidence.
+
 ## Monitoring & Analytics
 
 - **Vercel Analytics** — Page views and Core Web Vitals tracking (built-in with Vercel deployment)
@@ -182,8 +220,20 @@ chainChit/
     ├── ARCHITECTURE.md
     ├── CONTRACT_API.md
     ├── DEPLOYMENT.md
-    └── SECURITY_AUDIT_CHECKLIST.md
+    ├── SECURITY_AUDIT_CHECKLIST.md
+    ├── FEEDBACK_FORM.md    # Google Form question template
+    ├── USERS.md            # Mainnet user ledger
+    └── GROWTH_REPORT.md    # Monthly growth reporting
 ```
+
+## Roadmap
+
+- **[x] Level 4 — Green Belt**: production MVP, 13 testnet users, live on Vercel, demo video
+- **[ ] Level 5 — Blue Belt**: 50 testnet users, pitch deck, feedback-driven iteration
+- **[ ] Level 6 — Black Belt**: mainnet deployment, 20+ mainnet users, security review, X launch post, community contribution
+- **[ ] Level 7 — Master Track**: 50+ mainnet users, growth report, social proof, monthly product updates
+
+See [docs/GROWTH_REPORT.md](docs/GROWTH_REPORT.md) for monthly progress.
 
 ## License
 
