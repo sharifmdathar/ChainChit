@@ -452,7 +452,9 @@ export async function addUsdcTrustline(): Promise<void> {
   const account = await server.getAccount(publicKey);
   const networkPassphrase = getNetworkPassphrase();
 
-  const usdcIssuer = process.env.NEXT_PUBLIC_USDC_ISSUER || "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";
+  const usdcIssuer =
+    process.env.NEXT_PUBLIC_USDC_ISSUER ||
+    "GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
   const asset = new Asset("USDC", usdcIssuer);
 
   const tx = new TransactionBuilder(account, {
