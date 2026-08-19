@@ -69,6 +69,22 @@ Deployment in progress. Addresses will be recorded here after `NETWORK=mainnet n
 
 Network: **Stellar Mainnet** (Soroban RPC: `https://rpc.stellar.org`)
 
+## Funding Users (mainnet onboarding)
+
+Batch-fund new users with XLM + USDC using [frontend/scripts/fund_users.ts](frontend/scripts/fund_users.ts):
+
+```bash
+# from frontend/
+SOROBAN_SECRET_KEY=S... \
+USERS_CSV=../docs/users.csv \
+npx ts-node scripts/fund_users.ts
+```
+
+CSV format: `GBXXXXX...,50` (address, USDC amount). The script creates missing
+accounts (3.5 XLM reserve), establishes the USDC trustline, transfers USDC via
+the SAC, and prints per-user transaction hashes — copy those into
+[docs/USERS.md](docs/USERS.md) as on-chain proof.
+
 ## User Feedback
 
 We collect structured feedback from every user via a Google Form
@@ -79,6 +95,8 @@ Excel sheet for analysis and record-keeping.
 - **Responses (Excel)**: `docs/ChainChit_Feedback.xlsx` _(to be added after first export)_
 - **User ledger**: [docs/USERS.md](docs/USERS.md) — every onboarded user with on-chain proof
 - **Monthly growth report**: [docs/GROWTH_REPORT.md](docs/GROWTH_REPORT.md)
+- **SEP-24 anchor (mainnet)**: [docs/SEP24_MAINNET.md](docs/SEP24_MAINNET.md) — anchor research + funding fallback
+- **X/Twitter launch**: [docs/LAUNCH_POST.md](docs/LAUNCH_POST.md) — launch thread draft + cadence
 
 ## Improvement Plan (feedback-driven)
 
