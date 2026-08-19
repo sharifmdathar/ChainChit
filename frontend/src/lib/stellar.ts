@@ -8,6 +8,7 @@ import {
   isConnected as isFreighterConnected,
   requestAccess as requestFreighterAccess,
   signTransaction as signFreighterTransaction,
+  getNetwork as getFreighterNetwork,
 } from "@stellar/freighter-api";
 import { Address, Keypair, TransactionBuilder, rpc, Contract, xdr, Asset, Operation } from "@stellar/stellar-sdk";
 
@@ -65,6 +66,10 @@ export function getNetwork(): WalletNetwork {
   return network === "TESTNET" ? WalletNetwork.TESTNET : WalletNetwork.PUBLIC;
 }
 
+export function getAppNetworkName(): "TESTNET" | "PUBLIC" {
+  return process.env.NEXT_PUBLIC_NETWORK === "TESTNET" ? "TESTNET" : "PUBLIC";
+}
+
 export async function connectWallet(walletId: string = FREIGHTER_ID): Promise<string> {
   if (walletId === "MOCK") {
     if (!MOCK_ADDRESS) {
@@ -81,6 +86,12 @@ export async function connectWallet(walletId: string = FREIGHTER_ID): Promise<st
     throw new Error("Freighter wallet not installed or not connected");
   }
   const res = await requestFreighterAccess();
+  const walletNetwork = await getFreighterNetwork();
+  if (walletNetwork.network !== getAppNetworkName()) {
+    throw new Error(
+      `Freighter is on ${walletNetwork.network} but ChainChit runs on ${getAppNetworkName()}. Switch your Freighter network and reconnect.`
+    );
+  }
   activeAddress = res.address;
   return res.address;
 }
