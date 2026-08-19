@@ -2,7 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
-import { initiateSep24Deposit, initiateSep24Withdraw, getSep24Url, addUsdcTrustline } from "@/lib/stellar";
+import { initiateSep24Deposit, initiateSep24Withdraw, getSep24Url, addUsdcTrustline, getNetwork } from "@/lib/stellar";
+import { WalletNetwork } from "@creit.tech/stellar-wallets-kit";
 import toast from "react-hot-toast";
 
 export default function Sep24Ramp() {
@@ -14,6 +15,7 @@ export default function Sep24Ramp() {
   const [depositUrl, setDepositUrl] = useState<string | null>(null);
   const [withdrawUrl, setWithdrawUrl] = useState<string | null>(null);
   const [funding, setFunding] = useState(false);
+  const isTestnet = getNetwork() === WalletNetwork.TESTNET;
 
   const handleFaucet = useCallback(async () => {
     if (!address) return;
@@ -125,6 +127,7 @@ export default function Sep24Ramp() {
             <span>Add USDC Trustline</span>
           </button>
 
+          {isTestnet && (
           <button
             onClick={handleFaucet}
             disabled={funding}
@@ -135,6 +138,13 @@ export default function Sep24Ramp() {
             </svg>
             <span>{funding ? "Funding Wallet..." : "Get 50 Test USDC (Faucet)"}</span>
           </button>
+          )}
+        </div>
+      )}
+
+      {!isTestnet && connected && (
+        <div className="mb-6 p-4 rounded-xl bg-slate-900/25 border border-white/[0.03] text-sm text-slate-400">
+          On mainnet, fund your wallet by transferring USDC directly to your address. The testnet faucet is disabled.
         </div>
       )}
 

@@ -16,10 +16,15 @@ export async function POST(req: Request) {
     const sourceAddress = sourceKeypair.publicKey();
 
     const network = process.env.NEXT_PUBLIC_NETWORK || "TESTNET";
-    const networkPassphrase =
-      network === "TESTNET"
-        ? "Test SDF Network ; September 2015"
-        : "Public Global Stellar Network ; September 2015";
+    // Faucet funds accounts with the MOCK_ACCOUNT_SECRET's balance. On PUBLIC
+    // (mainnet) that would spend real USDC/XLM, so the faucet is testnet-only.
+    if (network !== "TESTNET") {
+      return NextResponse.json(
+        { error: "Faucet is testnet-only. On mainnet, fund accounts via direct USDC transfer." },
+        { status: 403 }
+      );
+    }
+    const networkPassphrase = "Test SDF Network ; September 2015";
     const rpcUrl = process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "";
     if (!rpcUrl) {
       return NextResponse.json({ error: "NEXT_PUBLIC_STELLAR_RPC_URL env var not configured" }, { status: 500 });
