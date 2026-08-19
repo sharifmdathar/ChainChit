@@ -309,26 +309,34 @@ mod test {
         client.initialize(&admin, &reputation, &100_u32);
     }
 
+    #[contract]
+    pub struct MockReputationContract;
+
+    #[contractimpl]
+    impl MockReputationContract {
+        pub fn get_composite_score(_env: Env, _address: Address) -> u32 {
+            100
+        }
+    }
+
     #[test]
+    #[should_panic(expected = "Error(Contract, #3)")]
     fn test_duplicate_attestation_rejected() {
         let env = Env::default();
         env.mock_all_auths();
         let admin = Address::generate(&env);
-        let reputation = Address::generate(&env);
+        let reputation = env.register(MockReputationContract, ());
         let contract_id = env.register(IdentityContract, ());
         let client = IdentityContractClient::new(&env, &contract_id);
 
         client.initialize(&admin, &reputation, &0_u32);
 
-        // Note: cross-contract call to reputation fails in unit test,
-        // but the duplicate check happens after that call.
-        // Since reputation is a dummy address, the weight will be 0,
-        // but the vouch will still be recorded.
-        // However, invoke_contract to a non-existent contract will panic.
-        // This test demonstrates the duplicate check logic path only in
-        // integration tests with a deployed mock.
-        // For unit tests, we verify the self-attestation guard (tested above)
-        // and the empty state queries.
+        let vouchor = Address::generate(&env);
+        let vouchee = Address::generate(&env);
+
+        client.vouch(&vouchor, &vouchee);
+        // Same vouchor vouching again for same vouchee → duplicate rejected
+        client.vouch(&vouchor, &vouchee);
     }
 
     #[test]
