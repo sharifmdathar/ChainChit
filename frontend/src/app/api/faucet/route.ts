@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, hash: sendResponse.hash });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[FAUCET ERROR]", err);
 
     let message = err instanceof Error ? err.message : String(err);

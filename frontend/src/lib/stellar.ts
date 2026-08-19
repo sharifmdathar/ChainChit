@@ -133,7 +133,7 @@ export async function signAndSendTransaction(
 
   const server = getRpcServer();
   const signedTx = TransactionBuilder.fromXDR(signedTxXdr, networkPassphrase);
-  const sendResponse = await server.sendTransaction(signedTx as any);
+  const sendResponse = await server.sendTransaction(signedTx);
 
   if (sendResponse.status === "ERROR") {
     throw new Error(`Transaction failed: ${sendResponse.errorResult}`);
@@ -243,7 +243,7 @@ export function bytesN32ToScVal(bytes: Uint8Array | number[]): xdr.ScVal {
 function debugWrap<T>(fnName: string, val: xdr.ScVal, fn: () => T): T {
   try {
     return fn();
-  } catch (err: any) {
+  } catch (err) {
     console.error(`[DEBUG SCVAL] Error in ${fnName}:`, err);
     try {
       if (val && typeof val.switch === "function") {

@@ -58,7 +58,7 @@ export default function CreateGroupPage() {
 
       toast.success(`Group created successfully! ID: ${groupId}`);
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(msg || "Failed to create group");
     } finally {

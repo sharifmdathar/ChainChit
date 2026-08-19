@@ -310,14 +310,15 @@ function getMapValue(map: xdr.ScMapEntry[], key: string): xdr.ScVal | undefined 
   return entry?.val();
 }
 
-function debugWrapParser<T>(fnName: string, val: any, fn: () => T): T {
+function debugWrapParser<T>(fnName: string, val: unknown, fn: () => T): T {
   try {
     return fn();
-  } catch (err: any) {
+  } catch (err) {
     console.error(`[DEBUG PARSER] Error in ${fnName}:`, err);
     try {
-      if (val && typeof val.switch === "function") {
-        console.error(`[DEBUG PARSER] Val switch name:`, val.switch().name);
+      if (val && typeof (val as { switch?: unknown }).switch === "function") {
+        const scVal = val as { switch(): { name: string } };
+        console.error(`[DEBUG PARSER] Val switch name:`, scVal.switch().name);
         console.error(`[DEBUG PARSER] Val JSON:`, JSON.stringify(val));
       } else {
         console.error(`[DEBUG PARSER] Val is:`, val);

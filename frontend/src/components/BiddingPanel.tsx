@@ -72,8 +72,9 @@ export default function BiddingPanel({
       return;
     }
 
-    // Generate a random nonce (0–2^53 safe integer range)
-    const nonce = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+    // CSPRNG nonce, 53 bits — crypto-secure, fits safe-integer range
+    const [hi, lo] = crypto.getRandomValues(new Uint32Array(2));
+    const nonce = (hi % 0x200000) * 0x100000000 + lo;
     setSavedNonce(nonce);
     setSavedAmount(amount);
 

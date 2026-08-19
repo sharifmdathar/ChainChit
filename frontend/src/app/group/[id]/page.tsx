@@ -66,8 +66,9 @@ export default function GroupDetailPage() {
       toast.success("Dispute raised successfully! Redirecting to disputes page...");
       setIsDisputeModalOpen(false);
       router.push("/disputes");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to raise dispute");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(msg || "Failed to raise dispute");
     } finally {
       setSubmittingDispute(false);
     }
