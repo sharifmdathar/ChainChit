@@ -91,7 +91,7 @@ We collect structured feedback from every user via a Google Form
 (name, email, wallet address, product rating 1–5). Responses are exported to an
 Excel sheet for analysis and record-keeping.
 
-- **Feedback form**: [Google Form](https://forms.google.com) — question template: [docs/FEEDBACK_FORM.md](docs/FEEDBACK_FORM.md)
+- **Feedback form**: [Google Form](https://forms.gle/2gWMDTeXUNkMaUUB8)
 - **Responses (Excel)**: `docs/ChainChit_Feedback.xlsx` _(to be added after first export)_
 - **User ledger**: [docs/USERS.md](docs/USERS.md) — every onboarded user with on-chain proof
 - **Monthly growth report**: [docs/GROWTH_REPORT.md](docs/GROWTH_REPORT.md)

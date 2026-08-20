@@ -1,10 +1,12 @@
 # ChainChit User Feedback Form
 
-This document contains the exact questions for the official ChainChit feedback
-form. Create the form on Google Forms, then link the exported Excel sheet in the
-README.
+**Live form:** https://forms.gle/2gWMDTeXUNkMaUUB8
 
-## Setup
+This document contains the exact questions used in the official ChainChit
+feedback form. Responses are exported to an Excel sheet for analysis
+(`docs/ChainChit_Feedback.xlsx`).
+
+## Setup (done)
 
 1. Go to [Google Forms](https://forms.google.com)
 2. Create a new form titled: **ChainChit User Feedback**
