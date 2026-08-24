@@ -230,15 +230,25 @@ async function friendbotFund(address: string): Promise<string | null> {
   return null;
 }
 
+async function waitForTrustline(address: string, timeoutMs = 30_000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await hasUsdcTrustline(address)) return true;
+    await sleep(2000);
+  }
+  return false;
+}
+
 async function ensureWallet(rec: UserRecord): Promise<void> {
   const exists = await accountExists(rec.public);
   if (!exists) {
     console.log(`  [wallet] creating ${rec.public.slice(0, 8)}… via friendbot`);
     rec.friendbotTx = (await friendbotFund(rec.public)) ?? undefined;
-    await sleep(1200);
   }
 
   if (!(await hasUsdcTrustline(rec.public))) {
+    // Friendbot/ledger-close latency: the account may not be queryable yet.
+    await waitForAccount(rec.public);
     console.log(`  [wallet] USDC trustline for ${rec.public.slice(0, 8)}…`);
     const user = Keypair.fromSecret(rec.secret);
     const acc = await horizon.loadAccount(rec.public);
@@ -247,8 +257,20 @@ async function ensureWallet(rec: UserRecord): Promise<void> {
       .setTimeout(60)
       .build();
     rec.trustlineTx = await submitClassic(tx, [user]);
-    await sleep(800);
+    // Soroban sim reads ledger state — wait until the trustline is actually visible.
+    if (!(await waitForTrustline(rec.public))) {
+      throw new Error(`trustline for ${rec.public} not visible after 30s`);
+    }
   }
+}
+
+async function waitForAccount(address: string, timeoutMs = 30_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await accountExists(address)) return;
+    await sleep(2000);
+  }
+  throw new Error(`account ${address} not visible after 30s`);
 }
 
 async function fundUserUsdc(rec: UserRecord): Promise<void> {
