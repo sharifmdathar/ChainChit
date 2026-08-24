@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
-import { commitBid, revealBid } from "@/lib/contracts";
+import { commitBid, revealBid, getCycleState } from "@/lib/contracts";
 import { computeCommitment } from "@/lib/utils";
+import type { CycleState } from "@/types";
 import toast from "react-hot-toast";
 
 interface BiddingPanelProps {
@@ -32,6 +33,26 @@ export default function BiddingPanel({
   );
   const [savedNonce, setSavedNonce] = useState<number | null>(null);
   const [savedAmount, setSavedAmount] = useState<number | null>(null);
+  const [cycleData, setCycleData] = useState<CycleState | null>(null);
+
+  // Revealed amounts become public once bidders reveal, so they inform new bids
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const st = await getCycleState(groupId, cycle);
+        if (!cancelled) setCycleData(st);
+      } catch {
+        /* non-fatal: insight block stays hidden */
+      }
+    }
+    void load();
+    const t = setInterval(load, 15_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [groupId, cycle, hasCommitment, isRevealed]);
 
   // Synchronize phase with contract state props
   useEffect(() => {
@@ -188,6 +209,44 @@ export default function BiddingPanel({
           <span className={`text-[10px] font-bold uppercase tracking-wider ${phase === "revealed" ? "text-indigo-400 animate-pulse" : "text-slate-500"}`}>3. Payout</span>
         </div>
       </div>
+
+      {/* Live bid insight */}
+      {cycleData && phase !== "revealed" && (() => {
+        const bidList = Object.values(cycleData.bids ?? {});
+        const committed = bidList.length;
+        const revealedAmounts = bidList
+          .filter((b) => b.revealed && b.amount > 0)
+          .map((b) => b.amount);
+        const uniqueRevealed = Array.from(new Set(revealedAmounts));
+        if (committed === 0) return null;
+        return (
+          <div className="p-4 rounded-xl bg-slate-900/40 border border-white/[0.05]">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Live Bid Insight</p>
+              <span className="text-xs font-semibold text-slate-300">
+                {committed} committed · {revealedAmounts.length} revealed
+              </span>
+            </div>
+            {uniqueRevealed.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] text-slate-500 mr-1">Taken:</span>
+                {uniqueRevealed.sort((a, b) => a - b).map((amt) => (
+                  <span key={amt} className="px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-[11px] font-mono text-rose-300">
+                    {(amt / 10_000_000).toFixed(2)}
+                  </span>
+                ))}
+                <span className="text-[11px] text-emerald-400 ml-1">
+                  → any other amount keeps your bid unique so far
+                </span>
+              </div>
+            ) : (
+              <p className="text-[11px] text-slate-500">
+                No reveals yet — earliest low bids are hardest to beat once amounts go public.
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Commit Phase */}
       {phase === "input" && (
