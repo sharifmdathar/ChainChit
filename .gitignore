@@ -8,3 +8,4 @@ soroban-sqlite*.db
 .DS_Store
 *.log
 *.tsbuildinfo
+.provision-keys.local.json
