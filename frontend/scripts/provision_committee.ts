@@ -77,9 +77,22 @@ function arg(name: string, fallback: number): number {
 
 const TOTAL_USERS = arg("users", 40);
 const GROUP_SIZE = arg("group-size", 20);
-const CYCLES = Math.max(1, Math.floor(arg("cycles", 2)));
+const CYCLES = Math.floor(arg("cycles", 2));
 const CONTRIBUTION_USDC = arg("contribution", 2.5); // whole USDC per cycle
 const FUNDING_USDC_PER_USER = arg("fund-usdc", 10); // headroom: contributions + fees
+
+// Contract constraints (chit_group::initialize): num_members >= 2, total_cycles >= 2.
+if (CYCLES < 2) {
+  throw new Error("--cycles must be >= 2: chit_group contract rejects total_cycles < 2 (Error #19)");
+}
+if (GROUP_SIZE < 2) {
+  throw new Error("--group-size must be >= 2: chit_group contract rejects num_members < 2");
+}
+if (FUNDING_USDC_PER_USER < CYCLES * CONTRIBUTION_USDC) {
+  throw new Error(
+    `--fund-usdc ${FUNDING_USDC_PER_USER} cannot cover ${CYCLES} cycles x ${CONTRIBUTION_USDC} contribution`
+  );
+}
 
 const USDC_DECIMALS = 1e7;
 const CONTRIBUTION_UNITS = BigInt(Math.round(CONTRIBUTION_USDC * USDC_DECIMALS));
