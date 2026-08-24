@@ -34,6 +34,16 @@ import { Keypair, TransactionBuilder, Asset, Operation, Contract, Address, Horiz
 import * as fs from "fs";
 import * as crypto from "crypto";
 
+// Load frontend/.env.local (KEY=VALUE lines); real env vars keep priority.
+try {
+  for (const line of fs.readFileSync(".env.local", "utf8").split("\n")) {
+    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+  }
+} catch {
+  /* no .env.local — env vars or CLI-provided values must cover config */
+}
+
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
