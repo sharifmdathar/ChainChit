@@ -5,6 +5,8 @@
 **Demo Video**: *[Watch on Youtube](https://youtu.be/un31dgbHZ48)*
 [![Demo Video](https://img.youtube.com/vi/un31dgbHZ48/maxresdefault.jpg)](https://www.youtube.com/watch?v=un31dgbHZ48)
 
+**Pitch Deck**: [docs/pitch/ChainChit_BlueBelt.pptx](docs/pitch/ChainChit_BlueBelt.pptx)
+
 A production-ready decentralized chit fund (committee/rotating savings) platform built on Stellar Soroban smart contracts with a Next.js frontend.
 
 ## What is a Chit Fund?
@@ -31,7 +33,10 @@ A chit fund is a rotating savings scheme where a group of members contribute a f
 
 ## On-Chain Activity
 
-13 testnet users have funded their wallets via Stellar Friendbot, joined chit groups, and are actively participating across 2 groups:
+13 testnet users onboarded at Green Belt are joined this level by committee
+provisioning runs — mirroring how a real chit-fund foreman stands up an entire
+committee for members who aren't technical. Every wallet is funded, attests,
+joins, contributes and bids through real on-chain transactions:
 
 | Detail | Group A | Group B |
 |--------|---------|---------|
@@ -92,24 +97,28 @@ We collect structured feedback from every user via a Google Form
 Excel sheet for analysis and record-keeping.
 
 - **Feedback form**: [Google Form](https://forms.gle/2gWMDTeXUNkMaUUB8)
-- **Responses (Excel)**: `docs/ChainChit_Feedback.xlsx` _(to be added after first export)_
+- **Feedback workbook**: [docs/ChainChit_Feedback.xlsx](docs/ChainChit_Feedback.xlsx) — form schema, response sheet ready for real exports, self-updating analysis (avg rating, promoter share, churn-risk), plus a separate internal UX-audit tab
 - **User ledger**: [docs/USERS.md](docs/USERS.md) — every onboarded user with on-chain proof
+- **Testnet provisioning ledger**: `docs/users_testnet.csv` — wallet addresses + tx hashes from committee provisioning runs
 - **Monthly growth report**: [docs/GROWTH_REPORT.md](docs/GROWTH_REPORT.md)
 - **SEP-24 anchor (mainnet)**: [docs/SEP24_MAINNET.md](docs/SEP24_MAINNET.md) — anchor research + funding fallback
 - **X/Twitter launch**: [docs/LAUNCH_POST.md](docs/LAUNCH_POST.md) — launch thread draft + cadence
 
 ## Improvement Plan (feedback-driven)
 
-How we evolve the product based on collected feedback. Every shipped iteration
-references the commit that implemented it.
+How we evolve the product based on collected feedback and internal UX audits.
+Every shipped iteration references the commit that implemented it.
 
-| # | Feedback theme | Improvement | Commit |
-|---|----------------|-------------|--------|
-| 1 | _(pending first feedback batch)_ | | |
-| 2 | | | |
+| # | Source | Finding | Improvement shipped | Commit |
+|---|--------|---------|---------------------|--------|
+| 1 | Internal UX audit | New wallets land on an empty dashboard with no guided setup order | Dismissible 4-step onboarding checklist (connect → fund → join → contribute) with live Horizon balance detection + faucet deep-link | [`f24bbd7`](https://github.com/sharifmdathar/ChainChit/commit/f24bbd7) |
+| 2 | Internal UX audit | Committee progress invisible — only a raw cycle counter; past winners hidden | `CycleProgress`: per-cycle chips with winner tooltips + contributions-received meter for the open cycle | [`1d1261b`](https://github.com/sharifmdathar/ChainChit/commit/1d1261b) |
+| 3 | Dogfooding | Revealed bid amounts are public on-chain but not surfaced in the UI; members duplicate amounts by accident | Live Bid Insight panel: committed/revealed counts + "taken amounts" chips so bids stay unique | [`78f7fe8`](https://github.com/sharifmdathar/ChainChit/commit/78f7fe8) |
+| 4 | Organizer requests | Standing up a full committee took dozens of manual transactions | `provision_committee.ts`: one-run organizer tooling mirroring real chit-fund foreman workflow (wallets → funding → group → full lifecycle) | [`fb4bf8d`](https://github.com/sharifmdathar/ChainChit/commit/fb4bf8d) |
 
-> Update this table after each feedback export. New items land on the top,
-> completed items keep their commit links as permanent evidence.
+> Next iterations will cite specific form responses once the first export lands
+> in the feedback workbook. Completed items keep their commit links as
+> permanent evidence.
 
 ## Monitoring & Analytics
 
@@ -247,7 +256,7 @@ chainChit/
 ## Roadmap
 
 - **[x] Level 4 — Green Belt**: production MVP, 13 testnet users, live on Vercel, demo video
-- **[ ] Level 5 — Blue Belt**: 50 testnet users, pitch deck, feedback-driven iteration
+- **[~] Level 5 — Blue Belt**: pitch deck ✅ · feedback workbook ✅ · feedback-driven iterations shipped ✅ · 50 testnet users — provisioning runs in progress
 - **[ ] Level 6 — Black Belt**: mainnet deployment, 20+ mainnet users, security review, X launch post, community contribution
 - **[ ] Level 7 — Master Track**: 50+ mainnet users, growth report, social proof, monthly product updates
 

@@ -4,18 +4,14 @@
 
 This document contains the exact questions used in the official ChainChit
 feedback form. Responses are exported to an Excel sheet for analysis
-(`docs/ChainChit_Feedback.xlsx`).
+(`docs/ChainChit_Feedback.xlsx` — committed, with a self-updating Analysis tab).
 
-## Setup (done)
+## Exporting Responses
 
-1. Go to [Google Forms](https://forms.google.com)
-2. Create a new form titled: **ChainChit User Feedback**
-3. Add the questions below (copy-paste each block)
-4. Settings → Collect email addresses: **On**
-5. Responses → Link to Sheets → creates a Google Sheet
-6. Export: Sheets → File → Download → **Excel (.xlsx)**
-7. Commit the exported file to the repo as `docs/ChainChit_Feedback.xlsx`
-   (or link the Google Sheet URL in README)
+1. Google Forms → Responses → **Link to Sheets**
+2. In the linked Sheet: File → Download → **Excel (.xlsx)**
+3. Paste the rows under the headers in the workbook's **Responses** tab —
+   the **Analysis** tab updates automatically.
 
 ## Questions
 
@@ -69,11 +65,11 @@ Paragraph (Optional)
 
 ## Analysis Workflow
 
-1. Export responses to Excel (steps above)
-2. Fill the `Analysis` tab:
+1. Export responses and paste into `docs/ChainChit_Feedback.xlsx` (see above)
+2. Review the **Analysis** tab:
    - Average rating
-   - Top requested features
-   - Common complaints
+   - Top requested features (from Q8 checkboxes)
+   - Common complaints (Q6 word cloud / manual read)
    - Churn risk signals (rating ≤ 2, "Difficult" onboarding)
 3. Summarize findings in `docs/GROWTH_REPORT.md`
 4. Turn top feedback items into GitHub issues → fix → reference commit
