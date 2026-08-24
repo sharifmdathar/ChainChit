@@ -100,7 +100,7 @@ We collect structured feedback from every user via a Google Form
 Excel sheet for analysis and record-keeping.
 
 - **Feedback form**: [Google Form](https://forms.gle/2gWMDTeXUNkMaUUB8)
-- **Feedback workbook**: [docs/ChainChit_Feedback.xlsx](docs/ChainChit_Feedback.xlsx) — form schema, response sheet ready for real exports, self-updating analysis (avg rating, promoter share, churn-risk), plus a separate internal UX-audit tab
+- **Responses Sheet**: [docs/ChainChit_Feedback.xlsx](docs/ChainChit_Feedback.xlsx). Google Sheet link [here](https://docs.google.com/spreadsheets/d/1KuYY_jTOB1iRILea2qHQbf2mb1-KRJ9AtICIm3EyyEY/edit?usp=sharing)
 - **User ledger**: [docs/USERS.md](docs/USERS.md) — every onboarded user with on-chain proof
 - **Testnet provisioning ledger**: `docs/users_testnet.csv` — wallet addresses + tx hashes from committee provisioning runs
 - **Monthly growth report**: [docs/GROWTH_REPORT.md](docs/GROWTH_REPORT.md)
