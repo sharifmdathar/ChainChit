@@ -7,21 +7,26 @@ Stellar Expert go in `docs/images/`.
 
 ### 1. User Growth
 - Users at start of month: **13** (Green Belt cohort)
-- Onboarding method this level: **committee provisioning** — organizer tooling
+- New users onboarded: **40** via committee provisioning
   ([frontend/scripts/provision_committee.ts](../frontend/scripts/provision_committee.ts))
-  stands up full committees the way a real chit-fund foreman does for
-  non-technical members. Ledger: `docs/users_testnet.csv`
-- Target: **50+ testnet wallets** with real contribution/bid transactions
+- **Total: 53 wallets**, ledger: [docs/users_testnet.csv](./users_testnet.csv) +
+  [docs/USERS.md](./USERS.md)
+- Onboarding method: organizer provisioning — mirrors real chit-fund foreman
+  workflow (foreman stands up the whole committee for non-technical members)
 
 ### 2. Transaction Activity
-- Groups created: **2** (Green Belt) + new provisioning-run groups
-- Every provisioned member generates ≥6 on-chain txs (create/trustline/fund,
-  join, contribute per cycle, commit, reveal)
-- Proof: Stellar Expert links in README + `docs/users_testnet.csv` tx hashes
+- Groups created: **2** (C: 20 members, D: 20 members), both driven to
+  **Completed** state across 2 full cycles
+- Per-member lifecycle txs: create, trustline, fund, join, 2× contribute,
+  2× commit_bid, 2× reveal_bid ≈ **10 on-chain txs per wallet**
+- Contributions paid: **80** · Payouts processed: **4** (30 USDC pool each)
+- Proof: Stellar Expert contract pages (linked in README/USERS.md) + funding
+  and join tx hashes in users_testnet.csv
 
 ### 3. Retention
-- Multi-cycle committees keep members transacting across cycles; reputation
-  accrual rewards staying active. Cycle-level stats land here after each run.
+- Multi-cycle committees kept all 40 members transacting across both cycles;
+  reputation accrual recorded for every on-time payment and cycle completion.
+- Cycle-level winner history readable on-chain via `get_cycle_state`.
 
 ### 4. User Feedback
 - Form live: [docs/FEEDBACK_FORM.md](./FEEDBACK_FORM.md) → https://forms.gle/2gWMDTeXUNkMaUUB8
@@ -46,6 +51,5 @@ Stellar Expert go in `docs/images/`.
 - Pitch deck: [docs/pitch/ChainChit_BlueBelt.pptx](./pitch/ChainChit_BlueBelt.pptx)
 
 ### 7. Next Month Targets
-- Complete provisioning runs to 50+ wallets; export first real form batch
-- Map top form themes → GitHub issues → commits (append to README table)
+- Export first real form batch; map top themes → GitHub issues → commits
 - Begin mainnet rehearsal for Level 6

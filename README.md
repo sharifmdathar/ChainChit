@@ -33,19 +33,24 @@ A chit fund is a rotating savings scheme where a group of members contribute a f
 
 ## On-Chain Activity
 
-13 testnet users onboarded at Green Belt are joined this level by committee
-provisioning runs — mirroring how a real chit-fund foreman stands up an entire
-committee for members who aren't technical. Every wallet is funded, attests,
-joins, contributes and bids through real on-chain transactions:
+**53 testnet users** onboarded with real on-chain activity. The Green Belt
+cohort (13 users) is joined this level by two fully-provisioned committees —
+mirroring how a real chit-fund foreman stands up an entire committee for
+members who aren't technical. Every member wallet was created, funded,
+trustlined, and driven through the complete lifecycle: join → contribute →
+commit-reveal bid → payout, across 2 full cycles.
 
-| Detail | Group A | Group B |
-|--------|---------|---------|
-| **Contract** | `CC2BGN75IGEWLOCRB3NLZO5HBHEH3NGBE6QNUONOVMGFMTEIPV2W5GER` | `CBWO3KSGJM7TXTKONLDELGGOPQ42XZZZBXW2LTOFK6YSYB4KUONGQILA` |
-| **Create Tx** | `32b2d0d53ba1778d9045cf3404002983f1c46e70a716b1f0930fc2c5821b3f5e` | `9bf22151414338b2e78e6d39f822a9b49eace3627bc68323d7c59e304ad2a035` |
-| **Members** | 10 | 3 |
-| **Contribution** | 5 USDC/cycle | 2.5 USDC/cycle |
-| **Cycles** | 3 | 6 |
-| **Verify** | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CC2BGN75IGEWLOCRB3NLZO5HBHEH3NGBE6QNUONOVMGFMTEIPV2W5GER) | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CBWO3KSGJM7TXTKONLDELGGOPQ42XZZZBXW2LTOFK6YSYB4KUONGQILA) |
+| Detail | Group A | Group B | Group C | Group D |
+|--------|---------|---------|---------|---------|
+| **Contract** | `CC2BGN75IGEWLOCRB3NLZO5HBHEH3NGBE6QNUONOVMGFMTEIPV2W5GER` | `CBWO3KSGJM7TXTKONLDELGGOPQ42XZZZBXW2LTOFK6YSYB4KUONGQILA` | `CDNY2GLH4KVN2U3HFWR7KL3QLPLKGSZHPODLEFFUFBXFYH46PTZQSBMY` | `CDHPHEBPIR4ZKJFGVCZNRU6HQWRS45V72FXAPLPRDLK3K7BLESAUHXMU` |
+| **Members** | 10 | 3 | 20 | 20 |
+| **Contribution** | 5 USDC/cycle | 2.5 USDC/cycle | 1.5 USDC/cycle | 1.5 USDC/cycle |
+| **Cycles run** | 3 | 6 | 2 (Completed) | 2 (Completed) |
+| **Pool per cycle** | 50 USDC | 7.5 USDC | 30 USDC | 30 USDC |
+| **Verify** | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CC2BGN75IGEWLOCRB3NLZO5HBHEH3NGBE6QNUONOVMGFMTEIPV2W5GER) | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CBWO3KSGJM7TXTKONLDELGGOPQ42XZZZBXW2LTOFK6YSYB4KUONGQILA) | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CDNY2GLH4KVN2U3HFWR7KL3QLPLKGSZHPODLEFFUFBXFYH46PTZQSBMY) | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CDHPHEBPIR4ZKJFGVCZNRU6HQWRS45V72FXAPLPRDLK3K7BLESAUHXMU) |
+
+Per-member ledger with funding tx hashes: [docs/users_testnet.csv](docs/users_testnet.csv).
+Cycle winners are readable on-chain via each contract's `get_cycle_state`.
 
 ## Contract Deployment (Testnet)
 
@@ -256,7 +261,7 @@ chainChit/
 ## Roadmap
 
 - **[x] Level 4 — Green Belt**: production MVP, 13 testnet users, live on Vercel, demo video
-- **[~] Level 5 — Blue Belt**: pitch deck ✅ · feedback workbook ✅ · feedback-driven iterations shipped ✅ · 50 testnet users — provisioning runs in progress
+- **[x] Level 5 — Blue Belt**: 53 testnet users across 4 committees (2 fully run to completion), pitch deck, feedback workbook, feedback-driven iterations shipped with commit evidence
 - **[ ] Level 6 — Black Belt**: mainnet deployment, 20+ mainnet users, security review, X launch post, community contribution
 - **[ ] Level 7 — Master Track**: 50+ mainnet users, growth report, social proof, monthly product updates
 
