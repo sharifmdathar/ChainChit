@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import * as sdk from "@stellar/stellar-sdk";
+import { faucetUsdcAmount } from "@/lib/faucet";
 
 export async function POST(req: Request) {
   try {
@@ -34,9 +35,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "NEXT_PUBLIC_USDC_CONTRACT env var not configured" }, { status: 500 });
     }
 
-    // Payout configurable via FAUCET_USDC_AMOUNT (default 10) — keeps the
-    // testnet faucet wallet alive across many demo clicks.
-    const payoutUsdc = Number(process.env.FAUCET_USDC_AMOUNT) > 0 ? Number(process.env.FAUCET_USDC_AMOUNT) : 10;
+    const payoutUsdc = faucetUsdcAmount();
     const amount = BigInt(payoutUsdc) * BigInt(10_000_000);
 
     console.log(
