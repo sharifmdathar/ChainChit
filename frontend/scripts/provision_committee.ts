@@ -122,6 +122,8 @@ interface UserRecord {
   fundingTx?: string;
   group?: string;
   joinTx?: string;
+  /** Persisted bid secrets by cycle — required to reveal after a crash. */
+  bids?: Record<string, { amount: string; nonce: string }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -579,7 +581,7 @@ async function main(): Promise<void> {
         await sleep(400);
       }
     }
-    await driveGroupLifecycleResumeAware(g.id, g.members);
+    await driveGroupLifecycleResumeAware(g.id, g.members, keyStore);
     saveKeyStore(keyStore);
   }
 
@@ -591,76 +593,86 @@ async function main(): Promise<void> {
 }
 
 /** Lifecycle with resume tolerance: skip already-paid/bid members on re-run. */
-async function driveGroupLifecycleResumeAware(groupId: string, members: UserRecord[]): Promise<void> {
-  const joined = await memberCount(groupId);
+async function driveGroupLifecycleResumeAware(groupId: string, members: UserRecord[], keyStore: Record<string, UserRecord>): Promise<void> {
 
-  // Determine whether collection already started by probing pay_contribution simulation.
-  async function phaseAllowsPay(): Promise<boolean> {
-    try {
-      const kp = Keypair.fromSecret(members[0].secret);
-      const account = await soroban.getAccount(kp.publicKey());
-      const tx = new TransactionBuilder(account, { fee: TX_FEE, networkPassphrase: PASSPHRASE })
-        .addOperation(
-          new Contract(groupId).call("pay_contribution", Address.fromString(kp.publicKey()).toScVal())
-        )
-        .setTimeout(30)
-        .build();
-      const sim = await soroban.simulateTransaction(tx);
-      if (rpc.Api.isSimulationError(sim)) {
-        // NotCollecting vs AlreadyPaid vs NotMember all surface here
-        return !sim.error.includes("NotCollecting") && !sim.error.includes("Error");
-      }
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  const collecting = await phaseAllowsPay();
-  if (!collecting && joined === members.length) {
-    console.log("  group already past Forming (resume)");
-  } else {
-    console.log("  [cycle] start_collection");
-    try {
-      await invokeAndPoll(groupId, "start_collection", [Address.fromString(adminAddress).toScVal()], admin);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (!msg.includes("NotForming")) throw e;
-    }
+  // Always attempt start_collection; NotForming means it already started.
+  console.log("  [cycle] start_collection (skipped if already Collecting)");
+  try {
+    await invokeAndPoll(groupId, "start_collection", [Address.fromString(adminAddress).toScVal()], admin);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!msg.includes("#14") && !msg.includes("NotForming")) throw e;
+    console.log("    already started");
   }
 
   for (let cycle = 1; cycle <= CYCLES; cycle++) {
     if (cycle > 1) {
       console.log(`  [cycle] advance_cycle → ${cycle}`);
-      await invokeAndPoll(groupId, "advance_cycle", [Address.fromString(adminAddress).toScVal()], admin);
+      try {
+        await invokeAndPoll(groupId, "advance_cycle", [Address.fromString(adminAddress).toScVal()], admin);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!msg.includes("#17") && !msg.includes("NotPayout")) throw e;
+        console.log("    payout not executed yet or group completed — continuing");
+      }
     }
 
+    let paidCount = 0;
     for (const m of members) {
       const kp = Keypair.fromSecret(m.secret);
       console.log(`  [pay ] cycle ${cycle} — ${m.public.slice(0, 8)}…`);
       try {
         await invokeAndPoll(groupId, "pay_contribution", [Address.fromString(m.public).toScVal()], kp);
+        paidCount += 1;
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        if (msg.includes("AlreadyPaid")) continue;
+        if (msg.includes("#7") || msg.includes("AlreadyPaid")) { paidCount += 1; continue; }
+        if (msg.includes("#15") || msg.includes("NotCollecting")) break; // all paid, state advanced
         throw e;
       }
       await sleep(400);
+    }
+    if (paidCount === members.length) {
+      console.log(`  [pay ] cycle ${cycle} complete (${paidCount}/${members.length})`);
     }
 
     for (let i = 0; i < members.length; i++) {
       const m = members[i];
       const kp = Keypair.fromSecret(m.secret);
-      const amount = bidAmountFor(i, members.length);
-      const nonce = BigInt.asUintN(64, crypto.randomBytes(8).readBigUInt64LE(0));
+      m.bids ??= {};
+      const stored = m.bids[String(cycle)];
+      const amount = stored ? BigInt(stored.amount) : bidAmountFor(i, members.length);
+      const nonce = stored
+        ? BigInt(stored.nonce)
+        : BigInt.asUintN(64, crypto.randomBytes(8).readBigUInt64LE(0));
+      // Secrets MUST hit disk before commit_bid — a crash between commit and
+      // reveal otherwise locks this member out of revealing forever.
+      if (!stored) {
+        m.bids[String(cycle)] = { amount: amount.toString(), nonce: nonce.toString() };
+        saveKeyStore(keyStore);
+      }
       console.log(`  [bid ] commit+reveal cycle ${cycle} — ${m.public.slice(0, 8)}… amount=${Number(amount) / USDC_DECIMALS}`);
       try {
         await invokeAndPoll(groupId, "commit_bid", [Address.fromString(m.public).toScVal(), commitmentFor(amount, nonce)], kp);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        if (!msg.includes("AlreadyCommitted")) throw e;
+        if (!msg.includes("#8") && !msg.includes("AlreadyCommitted")) throw e;
       }
-      await invokeAndPoll(groupId, "reveal_bid", [Address.fromString(m.public).toScVal(), scU64(amount), scU64(nonce)], kp);
+      try {
+        await invokeAndPoll(groupId, "reveal_bid", [Address.fromString(m.public).toScVal(), scU64(amount), scU64(nonce)], kp);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("#26") || msg.includes("AlreadyRevealed")) continue;
+        if (msg.includes("#9") || msg.includes("InvalidReveal")) {
+          // Nonce is regenerated per run — a committed-but-unrevealed bid from
+          // a previous run can't be revealed by us. Re-commit is blocked too.
+          throw new Error(
+            `${m.public} has an unrevealable bid from a prior interrupted run ` +
+            `(nonce not persisted). Re-run impossible for this member.`
+          );
+        }
+        throw e;
+      }
       await sleep(400);
     }
 
@@ -669,7 +681,8 @@ async function driveGroupLifecycleResumeAware(groupId: string, members: UserReco
       await invokeAndPoll(groupId, "execute_payout", [], admin);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      if (!msg.includes("NotBidding")) throw e;
+      if (!msg.includes("#16") && !msg.includes("NotBidding")) throw e;
+      console.log("    already executed");
     }
   }
 }
