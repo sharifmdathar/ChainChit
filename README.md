@@ -1,5 +1,9 @@
 # ChainChit — On-Chain Chit Fund Platform on Stellar
 
+[![CI](https://github.com/sharifmdathar/ChainChit/actions/workflows/ci.yml/badge.svg)](https://github.com/sharifmdathar/ChainChit/actions/workflows/ci.yml)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Stellar](https://img.shields.io/badge/network-Stellar%20Testnet-black?logo=stellar)
+
 **Live Application**: [chain-chit.vercel.app](https://chain-chit.vercel.app/)
 
 **Demo Video**: *[Watch on Youtube](https://youtu.be/un31dgbHZ48)*

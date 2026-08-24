@@ -81,9 +81,30 @@ jobs:
       - name: Lint
         run: bun next lint
 
+  typecheck-frontend:
+    name: Typecheck Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun x tsc --noEmit
+
   build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
+    needs: [typecheck-frontend]
     defaults:
       run:
         working-directory: frontend
@@ -103,9 +124,9 @@ jobs:
         env:
           NEXT_PUBLIC_NETWORK: TESTNET
           NEXT_PUBLIC_STELLAR_RPC_URL: https://soroban-testnet.stellar.org
-          NEXT_PUBLIC_CHIT_GROUP_CONTRACT: ""
-          NEXT_PUBLIC_REPUTATION_CONTRACT: ""
-          NEXT_PUBLIC_IDENTITY_CONTRACT: ""
-          NEXT_PUBLIC_DISPUTE_CONTRACT: ""
-          NEXT_PUBLIC_USDC_CONTRACT: ""
+          NEXT_PUBLIC_FACTORY_CONTRACT: CAJBU4IDXR5PFHY3AKRDUS2LTRID7ONORUXJJYG5LDPTG2QMREINLF6V
+          NEXT_PUBLIC_REPUTATION_CONTRACT: CDA53WAWFZ2VVOXUUXNQWVETL3KX5DTZ4O6YWNFKJIGNKLBF3NZ5HGSR
+          NEXT_PUBLIC_IDENTITY_CONTRACT: CAG3PALD7IHTXSJHIAVWWF2N6YICTMU2EO5JK5O3DC7HEJVU4L5JSSSL
+          NEXT_PUBLIC_DISPUTE_CONTRACT: CCX3JYBOO3LHIRKIDXTO755OBUL6W7GSZKPFNPWCTN3NNLZU2WX4OK3B
+          NEXT_PUBLIC_USDC_CONTRACT: CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
 
