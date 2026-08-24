@@ -6,8 +6,8 @@
 
 **Live Application**: [chain-chit.vercel.app](https://chain-chit.vercel.app/)
 
-**Demo Video**: *[Watch on Youtube](https://youtu.be/un31dgbHZ48)*
-[![Demo Video](https://img.youtube.com/vi/un31dgbHZ48/maxresdefault.jpg)](https://www.youtube.com/watch?v=un31dgbHZ48)
+**Demo Video**: *[Watch on YouTube](https://youtu.be/7CMEtcvsuiM)*
+[![Demo Video](https://img.youtube.com/vi/7CMEtcvsuiM/maxresdefault.jpg)](https://youtu.be/7CMEtcvsuiM)
 
 **Pitch Deck**: [docs/pitch/ChainChit_BlueBelt.pptx](docs/pitch/ChainChit_BlueBelt.pptx)
 
