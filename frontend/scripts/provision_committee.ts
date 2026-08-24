@@ -447,6 +447,24 @@ function writeLedger(groups: { id: string; members: UserRecord[] }[]): void {
 // Main
 // ---------------------------------------------------------------------------
 
+/** Resume a chunk's existing group if valid; otherwise adopt or deploy one. */
+async function resolveGroupForChunk(chunk: UserRecord[], adoptable: string[]): Promise<string> {
+  const existing = chunk[0].group;
+  if (existing) {
+    try {
+      await memberCount(existing);
+      console.log(`[group] resuming ${existing} (${chunk.length} seats)`);
+      return existing;
+    } catch {
+      /* stale/invalid id from an older keystore — fall through to adoption */
+    }
+  }
+  const adopted = adoptable.shift();
+  const gid = adopted ?? (await createGroup(chunk.length));
+  console.log(`[group] ${adopted ? "adopting previous run's group" : "created"} ${gid} (${chunk.length} seats)`);
+  return gid;
+}
+
 async function main(): Promise<void> {
   console.log(`ChainChit committee provisioning — ${TOTAL_USERS} users, groups of ${GROUP_SIZE}, ${CYCLES} cycles, testnet`);
   console.log(`admin: ${adminAddress}\n`);
@@ -534,29 +552,10 @@ async function main(): Promise<void> {
   for (const chunk of chunks) {
     if (chunk.length < 2) continue; // contract requires num_members >= 2
 
-    let gid = chunk[0].group;
-    let resumable = false;
-    if (gid) {
-      try {
-        await memberCount(gid);
-        resumable = true;
-        console.log(`[group] resuming ${gid} (${chunk.length} seats)`);
-      } catch {
-        gid = undefined;
-      }
-    }
-    if (!resumable) {
-      const adopted = adoptable.shift();
-      if (adopted) {
-        gid = adopted;
-        console.log(`[group] adopting previous run's group ${gid}`);
-      } else {
-        gid = await createGroup(chunk.length);
-      }
-    }
-    for (const m of chunk) m.group = gid;
+    const resolvedId = await resolveGroupForChunk(chunk, adoptable);
+    for (const m of chunk) m.group = resolvedId;
     saveKeyStore(keyStore);
-    groups.push({ id: gid, members: chunk });
+    groups.push({ id: resolvedId, members: chunk });
     await sleep(800);
   }
 
