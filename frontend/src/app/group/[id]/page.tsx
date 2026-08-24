@@ -180,7 +180,7 @@ export default function GroupDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 text-sm tabular">
           <div className="p-3 rounded-xl bg-slate-900/30 border border-white/[0.02]">
             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Cycle Contribution</p>
             <p className="font-semibold text-slate-200">{formatUsdc(groupInfo.contribution_amount)}</p>

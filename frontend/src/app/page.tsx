@@ -8,17 +8,27 @@ export default function HomePage() {
   const { connected, address, connect, connecting, network } = useWallet();
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12 md:py-20 animate-fade-in-up">
+    <div className="max-w-5xl mx-auto px-4 py-12 md:py-20">
       {/* Hero Section */}
-      <div className="text-center mb-20 relative">
-        <div className="inline-flex items-center gap-2 px-3 py-1 mb-6 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-sm">
+      <div className="text-center mb-20 relative animate-fade-in-up">
+        {/* Signature aurora — one per page */}
+        <div
+          aria-hidden
+          className="aurora-blob absolute left-1/2 top-[-120px] -translate-x-1/2 w-[720px] h-[420px] pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(ellipse at 30% 40%, rgba(99,102,241,0.22), transparent 60%), radial-gradient(ellipse at 70% 50%, rgba(34,211,238,0.12), transparent 55%), radial-gradient(ellipse at 55% 65%, rgba(139,92,246,0.16), transparent 58%)",
+            filter: "blur(40px)",
+          }}
+        />
+        <div className="relative inline-flex items-center gap-2 px-3 py-1 mb-6 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-sm">
           <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
           {network === "PUBLIC" ? "Stellar Mainnet" : "Stellar Testnet"}
         </div>
-        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 bg-gradient-to-r from-slate-100 via-indigo-200 to-indigo-400 bg-clip-text text-transparent leading-none">
-          Chit Funds, <br className="hidden sm:inline" />Reinvented
+        <h1 className="relative text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-[1.02]">
+          <span className="text-gradient">Chit Funds, <br className="hidden sm:inline" />Reinvented</span>
         </h1>
-        <p className="text-base md:text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="relative text-base md:text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed [text-wrap:balance]">
           Smart contract custody eliminates fraud. On-chain reputation lets you
           evaluate strangers before pooling money. Join rotating savings groups beyond your
           immediate circle — safely.
@@ -57,7 +67,7 @@ export default function HomePage() {
       </div>
 
       {/* Feature Section */}
-      <div className="grid md:grid-cols-3 gap-6 mb-24">
+      <div className="grid md:grid-cols-3 gap-6 mb-24 stagger">
         <FeatureCard 
           title="Trustless Custody" 
           description="Funds locked in Soroban smart contracts. No organizer can run away with the pool. Every USDC transfer is on-chain and verifiable." 
@@ -97,7 +107,7 @@ export default function HomePage() {
           {/* Timeline connecting line for desktop */}
           <div className="hidden md:block absolute top-6 left-[12%] right-[12%] h-[2px] bg-gradient-to-r from-indigo-500/10 via-indigo-500/30 to-indigo-500/10 z-0" />
           
-          <div className="grid md:grid-cols-4 gap-8 relative z-10">
+          <div className="grid md:grid-cols-4 gap-8 relative z-10 stagger">
             <StepCard number={1} title="Get Vouched" description="An existing member vouches for you, creating a reputation attestation." />
             <StepCard number={2} title="Join a Group" description="Browse groups, check member reputation scores, and join that fits your risk level." />
             <StepCard number={3} title="Contribute & Bid" description="Pay your monthly contribution. Bid for the prize pool — lower bids win." />

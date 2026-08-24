@@ -145,7 +145,7 @@ export default function DashboardPage() {
       />
 
       {/* Stats Summary Grid */}
-      <div className="grid sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid sm:grid-cols-3 gap-4 mb-8 stagger tabular">
         {/* Identity & Score */}
         <div className="glass-card p-5 flex flex-col justify-between">
           <div>
@@ -253,7 +253,7 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger">
             {groups.map((g) => (
               <GroupCard
                 key={g.contractId}
