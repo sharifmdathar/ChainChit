@@ -13,6 +13,25 @@
 
 A production-ready decentralized chit fund (committee/rotating savings) platform built on Stellar Soroban smart contracts with a Next.js frontend.
 
+## Table of Contents
+
+- [What is a Chit Fund?](#what-is-a-chit-fund)
+- [On-Chain Activity](#on-chain-activity)
+- [Screenshots](#screenshots)
+- [User Feedback](#user-feedback)
+- [Improvement Plan](#improvement-plan-feedback-driven)
+- [Monitoring & Analytics](#monitoring--analytics)
+- [Quick Start](#quick-start)
+- [Contract Lifecycle](#contract-lifecycle)
+- [Bidding Mechanics](#bidding-mechanics)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Contract Deployment (Testnet)](#contract-deployment-testnet)
+- [Contract Deployment (Mainnet)](#contract-deployment-mainnet)
+- [Funding Users](#funding-users-mainnet-onboarding)
+- [Roadmap](#roadmap)
+- [License](#license)
+
 ## What is a Chit Fund?
 
 A chit fund is a rotating savings scheme where a group of members contribute a fixed amount each cycle. One member wins the pooled amount each cycle through a competitive bidding process. The lowest unique bid wins — incentivizing participants to bid the smallest fee they're willing to accept for early pool access.
@@ -56,48 +75,23 @@ commit-reveal bid → payout, across 2 full cycles.
 Per-member ledger with funding tx hashes: [docs/users_testnet.csv](docs/users_testnet.csv).
 Cycle winners are readable on-chain via each contract's `get_cycle_state`.
 
-## Contract Deployment (Testnet)
+## Screenshots
 
-| Contract | Address |
-|----------|---------|
-| **Factory** | `CAJBU4IDXR5PFHY3AKRDUS2LTRID7ONORUXJJYG5LDPTG2QMREINLF6V` |
-| **ChitGroup** | Deployed dynamically via factory |
-| **Reputation** | `CDA53WAWFZ2VVOXUUXNQWVETL3KX5DTZ4O6YWNFKJIGNKLBF3NZ5HGSR` |
-| **Identity** | `CAG3PALD7IHTXSJHIAVWWF2N6YICTMU2EO5JK5O3DC7HEJVU4L5JSSSL` |
-| **Dispute** | `CCX3JYBOO3LHIRKIDXTO755OBUL6W7GSZKPFNPWCTN3NNLZU2WX4OK3B` |
-| **USDC** | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
+### Dashboard
+![Dashboard](docs/images/DASHBOARD.webp)
 
-Network: **Stellar Testnet** (Soroban RPC: `https://soroban-testnet.stellar.org`)
+### Freighter Wallet with USDC
+![Balance](docs/images/BALANCE.png)
 
-## Contract Deployment (Mainnet) — Level 6/7
+### Analytics & Monitoring
+![Analytics](docs/images/ANALYTICS.webp)
 
-Deployment in progress. Addresses will be recorded here after `NETWORK=mainnet npx tsx scripts/deploy.ts`.
+### Stellar Expert Page of Deployed Contract 
+![Stellar Expert](docs/images/STELLAR_EXPERT.png)
 
-| Contract | Address |
-|----------|---------|
-| **Factory** | _pending_ |
-| **Reputation** | _pending_ |
-| **Identity** | _pending_ |
-| **Dispute** | _pending_ |
-| **USDC (Circle SAC)** | `CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75` |
-
-Network: **Stellar Mainnet** (Soroban RPC: `https://rpc.stellar.org`)
-
-## Funding Users (mainnet onboarding)
-
-Batch-fund new users with XLM + USDC using [frontend/scripts/fund_users.ts](frontend/scripts/fund_users.ts):
-
-```bash
-# from frontend/
-SOROBAN_SECRET_KEY=S... \
-USERS_CSV=../docs/users.csv \
-npx tsx scripts/fund_users.ts
-```
-
-CSV format: `GBXXXXX...,50` (address, USDC amount). The script creates missing
-accounts (3.5 XLM reserve), establishes the USDC trustline, transfers USDC via
-the SAC, and prints per-user transaction hashes — copy those into
-[docs/USERS.md](docs/USERS.md) as on-chain proof.
+### Blue Belt Committees — On-Chain Proof
+![Group C](docs/images/STELLAR_EXPERT_GROUP_C.png)
+![Group D](docs/images/STELLAR_EXPERT_GROUP_D.png)
 
 ## User Feedback
 
@@ -134,24 +128,6 @@ Every shipped iteration references the commit that implemented it.
 - **Vercel Analytics** — Page views and Core Web Vitals tracking (built-in with Vercel deployment)
 - **Error Monitoring** — Console error logging via `react-hot-toast` with structured error messages for simulation failures, transaction timeouts, and wallet errors
 - **Transaction Status** — On-chain transaction polling with status tracking (pending → success/fail) with full XDR error details
-
-## Screenshots
-
-### Dashboard
-![Dashboard](docs/images/DASHBOARD.webp)
-
-### Freighter Wallet with USDC
-![Balance](docs/images/BALANCE.png)
-
-### Analytics & Monitoring
-![Analytics](docs/images/ANALYTICS.webp)
-
-### Stellar Expert Page of Deployed Contract 
-![Stellar Expert](docs/images/STELLAR_EXPERT.png)
-
-### Blue Belt Committees — On-Chain Proof
-![Group C](docs/images/STELLAR_EXPERT_GROUP_C.png)
-![Group D](docs/images/STELLAR_EXPERT_GROUP_D.png)
 
 ## Quick Start
 
@@ -265,6 +241,49 @@ chainChit/
     ├── USERS.md            # Mainnet user ledger
     └── GROWTH_REPORT.md    # Monthly growth reporting
 ```
+
+## Contract Deployment (Testnet)
+
+| Contract | Address |
+|----------|---------|
+| **Factory** | `CAJBU4IDXR5PFHY3AKRDUS2LTRID7ONORUXJJYG5LDPTG2QMREINLF6V` |
+| **ChitGroup** | Deployed dynamically via factory |
+| **Reputation** | `CDA53WAWFZ2VVOXUUXNQWVETL3KX5DTZ4O6YWNFKJIGNKLBF3NZ5HGSR` |
+| **Identity** | `CAG3PALD7IHTXSJHIAVWWF2N6YICTMU2EO5JK5O3DC7HEJVU4L5JSSSL` |
+| **Dispute** | `CCX3JYBOO3LHIRKIDXTO755OBUL6W7GSZKPFNPWCTN3NNLZU2WX4OK3B` |
+| **USDC** | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
+
+Network: **Stellar Testnet** (Soroban RPC: `https://soroban-testnet.stellar.org`)
+
+## Contract Deployment (Mainnet)
+
+Level 6/7 target. Deployment in progress. Addresses will be recorded here after `NETWORK=mainnet npx tsx scripts/deploy.ts`.
+
+| Contract | Address |
+|----------|---------|
+| **Factory** | _pending_ |
+| **Reputation** | _pending_ |
+| **Identity** | _pending_ |
+| **Dispute** | _pending_ |
+| **USDC (Circle SAC)** | `CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75` |
+
+Network: **Stellar Mainnet** (Soroban RPC: `https://rpc.stellar.org`)
+
+## Funding Users (mainnet onboarding)
+
+Batch-fund new users with XLM + USDC using [frontend/scripts/fund_users.ts](frontend/scripts/fund_users.ts):
+
+```bash
+# from frontend/
+SOROBAN_SECRET_KEY=S... \
+USERS_CSV=../docs/users.csv \
+npx tsx scripts/fund_users.ts
+```
+
+CSV format: `GBXXXXX...,50` (address, USDC amount). The script creates missing
+accounts (3.5 XLM reserve), establishes the USDC trustline, transfers USDC via
+the SAC, and prints per-user transaction hashes — copy those into
+[docs/USERS.md](docs/USERS.md) as on-chain proof.
 
 ## Roadmap
 
