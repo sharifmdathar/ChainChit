@@ -21,7 +21,7 @@
  *   NEXT_PUBLIC_NETWORK=TESTNET \
  *   NEXT_PUBLIC_FACTORY_CONTRACT=CAJBU4IDXR5PFHY3AKRDUS2LTRID7ONORUXJJYG5LDPTG2QMREINLF6V \
  *   NEXT_PUBLIC_USDC_CONTRACT=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA \
- *   npx ts-node scripts/provision_committee.ts --users 40 --group-size 20 --cycles 2 --contribution 2.5
+ *   npx tsx scripts/provision_committee.ts --users 40 --group-size 20 --cycles 2 --contribution 2.5
  *
  * Outputs:
  *   - frontend/.provision-keys.local.json (gitignored — wallet keys, resume support)

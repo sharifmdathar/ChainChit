@@ -11,7 +11,7 @@
  *   USERS_CSV=../docs/users.csv \
  *   NEXT_PUBLIC_USDC_CONTRACT=CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75 \
  *   NEXT_PUBLIC_USDC_ISSUER=GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN \
- *   npx ts-node scripts/fund_users.ts
+ *   npx tsx scripts/fund_users.ts
  *
  * CSV format (no header):
  *   GBXXXXX...,50

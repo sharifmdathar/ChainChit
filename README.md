@@ -62,7 +62,7 @@ Network: **Stellar Testnet** (Soroban RPC: `https://soroban-testnet.stellar.org`
 
 ## Contract Deployment (Mainnet) — Level 6/7
 
-Deployment in progress. Addresses will be recorded here after `NETWORK=mainnet npx ts-node scripts/deploy.ts`.
+Deployment in progress. Addresses will be recorded here after `NETWORK=mainnet npx tsx scripts/deploy.ts`.
 
 | Contract | Address |
 |----------|---------|
@@ -82,7 +82,7 @@ Batch-fund new users with XLM + USDC using [frontend/scripts/fund_users.ts](fron
 # from frontend/
 SOROBAN_SECRET_KEY=S... \
 USERS_CSV=../docs/users.csv \
-npx ts-node scripts/fund_users.ts
+npx tsx scripts/fund_users.ts
 ```
 
 CSV format: `GBXXXXX...,50` (address, USDC amount). The script creates missing
@@ -183,7 +183,7 @@ npm run dev
 export SOROBAN_SECRET_KEY=S...
 
 # Deploy to testnet
-NETWORK=testnet npx ts-node scripts/deploy.ts
+NETWORK=testnet npx tsx scripts/deploy.ts
 ```
 
 The deploy script outputs contract IDs and writes them to `frontend/.env.local`.

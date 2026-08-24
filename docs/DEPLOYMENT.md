@@ -44,7 +44,7 @@ Transfer XLM to the admin address for transaction fees. Recommended: use a hardw
 
 ```bash
 export SOROBAN_SECRET_KEY=S...  # Admin secret key
-NETWORK=testnet npx ts-node scripts/deploy.ts
+NETWORK=testnet npx tsx scripts/deploy.ts
 ```
 
 The script:
