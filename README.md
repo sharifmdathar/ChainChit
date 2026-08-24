@@ -149,6 +149,10 @@ Every shipped iteration references the commit that implemented it.
 ### Stellar Expert Page of Deployed Contract 
 ![Stellar Expert](docs/images/STELLAR_EXPERT.png)
 
+### Blue Belt Committees — On-Chain Proof
+![Group C](docs/images/STELLAR_EXPERT_GROUP_C.png)
+![Group D](docs/images/STELLAR_EXPERT_GROUP_D.png)
+
 ## Quick Start
 
 ### Prerequisites
