@@ -337,9 +337,25 @@ function i128(v: bigint): xdr.ScVal {
 // Step 2 — groups via factory
 // ---------------------------------------------------------------------------
 
+function scValToAddr(v: xdr.ScVal): string {
+  return Address.fromScVal(v).toString();
+}
+
+async function listAdminGroups(): Promise<string[]> {
+  const account = await soroban.getAccount(adminAddress);
+  const tx = new TransactionBuilder(account, { fee: TX_FEE, networkPassphrase: PASSPHRASE })
+    .addOperation(factory.call("get_user_groups", Address.fromString(adminAddress).toScVal()))
+    .setTimeout(30)
+    .build();
+  const sim = await soroban.simulateTransaction(tx);
+  if (rpc.Api.isSimulationError(sim)) throw new Error(`get_user_groups failed: ${sim.error}`);
+  const vec = sim.result?.retval?.vec();
+  return vec ? vec.map(scValToAddr) : [];
+}
+
 async function createGroup(memberCount: number): Promise<string> {
   const salt = crypto.randomBytes(32);
-  const result = await invokeAndPoll(
+  await invokeAndPoll(
     FACTORY_ID!,
     "create_group",
     [
@@ -354,18 +370,11 @@ async function createGroup(memberCount: number): Promise<string> {
     ],
     admin
   );
-  // Fetch the newly created group from factory.get_user_groups(admin).
-  void result;
-  const account = await soroban.getAccount(adminAddress);
-  const tx = new TransactionBuilder(account, { fee: TX_FEE, networkPassphrase: PASSPHRASE })
-    .addOperation(factory.call("get_user_groups", Address.fromString(adminAddress).toScVal()))
-    .setTimeout(30)
-    .build();
-  const sim = await soroban.simulateTransaction(tx);
-  if (rpc.Api.isSimulationError(sim)) throw new Error(`get_user_groups failed: ${sim.error}`);
-  const vec = sim.result?.retval?.vec();
-  if (!vec || vec.length === 0) throw new Error("factory returned no groups");
-  const last = vec[vec.length - 1].address().toString();
+  // The factory emits no return value we can read post-send; the new group is
+  // the latest entry in get_user_groups(admin).
+  const groups = await listAdminGroups();
+  if (groups.length === 0) throw new Error("factory returned no groups");
+  const last = groups[groups.length - 1];
   console.log(`[group] created ${last} (${memberCount} seats, ${CYCLES} cycles, ${CONTRIBUTION_USDC} USDC/cycle)`);
   return last;
 }
@@ -503,6 +512,18 @@ async function main(): Promise<void> {
     if (r.trustlineTx !== undefined || (await hasUsdcTrustline(r.public))) healthy.push(r);
   }
   console.log(`\n[phase 2/3] creating groups (${healthy.length} usable wallets)`);
+
+  // Adopt groups created by earlier interrupted runs (admin-owned, still
+  // unpopulated) before deploying new ones.
+  const adoptable: string[] = [];
+  for (const gid of (await listAdminGroups()).reverse()) {
+    try {
+      if ((await memberCount(gid)) === 0) adoptable.push(gid);
+    } catch {
+      /* unreachable/malformed group id from an old run — skip */
+    }
+  }
+
   const chunks: UserRecord[][] = [];
   for (let i = 0; i < healthy.length; i += GROUP_SIZE) {
     chunks.push(healthy.slice(i, i + GROUP_SIZE));
@@ -510,8 +531,30 @@ async function main(): Promise<void> {
   const groups: { id: string; members: UserRecord[] }[] = [];
   for (const chunk of chunks) {
     if (chunk.length < 2) continue; // contract requires num_members >= 2
-    const id = await createGroup(chunk.length);
-    groups.push({ id, members: chunk });
+
+    let gid = chunk[0].group;
+    let resumable = false;
+    if (gid) {
+      try {
+        await memberCount(gid);
+        resumable = true;
+        console.log(`[group] resuming ${gid} (${chunk.length} seats)`);
+      } catch {
+        gid = undefined;
+      }
+    }
+    if (!resumable) {
+      const adopted = adoptable.shift();
+      if (adopted) {
+        gid = adopted;
+        console.log(`[group] adopting previous run's group ${gid}`);
+      } else {
+        gid = await createGroup(chunk.length);
+      }
+    }
+    for (const m of chunk) m.group = gid;
+    saveKeyStore(keyStore);
+    groups.push({ id: gid, members: chunk });
     await sleep(800);
   }
 
