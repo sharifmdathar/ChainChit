@@ -65,7 +65,7 @@ commit-reveal bid → payout, across 2 full cycles.
 
 | Detail | Group A | Group B | Group C | Group D |
 |--------|---------|---------|---------|---------|
-| **Contract** | `CC2BGN75IGEWLOCRB3NLZO5HBHEH3NGBE6QNUONOVMGFMTEIPV2W5GER` | `CBWO3KSGJM7TXTKONLDELGGOPQ42XZZZBXW2LTOFK6YSYB4KUONGQILA` | `CDNY2GLH4KVN2U3HFWR7KL3QLPLKGSZHPODLEFFUFBXFYH46PTZQSBMY` | `CDHPHEBPIR4ZKJFGVCZNRU6HQWRS45V72FXAPLPRDLK3K7BLESAUHXMU` |
+| **Contract** | [`CC2B…V2W5GER`](https://stellar.expert/explorer/testnet/contract/CC2BGN75IGEWLOCRB3NLZO5HBHEH3NGBE6QNUONOVMGFMTEIPV2W5GER) | [`CBWO…UONGQILA`](https://stellar.expert/explorer/testnet/contract/CBWO3KSGJM7TXTKONLDELGGOPQ42XZZZBXW2LTOFK6YSYB4KUONGQILA) | [`CDNY…TZQSBMY`](https://stellar.expert/explorer/testnet/contract/CDNY2GLH4KVN2U3HFWR7KL3QLPLKGSZHPODLEFFUFBXFYH46PTZQSBMY) | [`CDHP…SAUHXMU`](https://stellar.expert/explorer/testnet/contract/CDHPHEBPIR4ZKJFGVCZNRU6HQWRS45V72FXAPLPRDLK3K7BLESAUHXMU) |
 | **Members** | 10 | 3 | 20 | 20 |
 | **Contribution** | 5 USDC/cycle | 2.5 USDC/cycle | 1.5 USDC/cycle | 1.5 USDC/cycle |
 | **Cycles run** | 3 | 6 | 2 (Completed) | 2 (Completed) |
