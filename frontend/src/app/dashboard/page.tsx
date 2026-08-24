@@ -5,6 +5,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { useReputation } from "@/hooks/useReputation";
 import { ReputationBadge } from "@/components/ReputationBadge";
 import { GroupCard } from "@/components/GroupCard";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
 import Sep24Ramp from "@/components/Sep24Ramp";
 import { basisPointsToPercent, shortenAddress } from "@/lib/utils";
 import { getUserGroups, getGroupInfo, getMembers } from "@/lib/contracts";
@@ -133,6 +134,15 @@ export default function DashboardPage() {
           <span>+ Create Group</span>
         </Link>
       </div>
+
+      {/* First-time onboarding checklist (auto-hides when complete) */}
+      <OnboardingChecklist
+        connected={connected}
+        address={address}
+        groupsLoaded={!loading}
+        joinedGroups={groups.length}
+        activeGroups={groups.filter((g) => g.info.state !== "Forming" && g.info.state !== "Paused").length}
+      />
 
       {/* Stats Summary Grid */}
       <div className="grid sm:grid-cols-3 gap-4 mb-8">
