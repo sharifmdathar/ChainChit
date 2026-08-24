@@ -29,7 +29,6 @@ const RPC_URL = "https://soroban-testnet.stellar.org";
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 const PASSPHRASE = "Test SDF Network ; September 2015";
 
-if (!DEST) throw new Error("DEST_ADDRESS env var required");
 const horizon = new Horizon.Server(HORIZON_URL);
 const soroban = new rpc.Server(RPC_URL);
 const usdc = new Contract(process.env.NEXT_PUBLIC_USDC_CONTRACT!);
@@ -37,6 +36,7 @@ const usdc = new Contract(process.env.NEXT_PUBLIC_USDC_CONTRACT!);
 interface Rec { secret: string; public: string; group?: string }
 
 async function main(): Promise<void> {
+  if (!DEST) throw new Error("DEST_ADDRESS env var required");
   const store: Record<string, Rec> = JSON.parse(fs.readFileSync(KEYS_FILE, "utf8"));
   const wallets = Object.values(store);
   console.log(`sweeping ${wallets.length} wallets → ${DEST}\n`);
