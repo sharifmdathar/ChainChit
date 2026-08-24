@@ -7,6 +7,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { ContributionFlow } from "@/components/ContributionFlow";
 import { ReputationBadge } from "@/components/ReputationBadge";
 import BiddingPanel from "@/components/BiddingPanel";
+import { CycleProgress } from "@/components/CycleProgress";
 import { formatUsdc, getStateColor, shortenAddress } from "@/lib/utils";
 import { getCycleState } from "@/lib/contracts";
 import type { CycleState } from "@/types";
@@ -92,6 +93,9 @@ export default function GroupDetailPage() {
 
   const isAdmin = address === groupInfo.admin;
   const isMember = members.includes(address || "");
+  const paidThisCycle = cycleState
+    ? Object.values(cycleState.payments).filter((s) => s === "Paid").length
+    : 0;
 
   const STATES_SEQUENCE = ["Forming", "Collecting", "Bidding", "Payout", "Completed"];
   const currentStepIndex = STATES_SEQUENCE.indexOf(groupInfo.state);
@@ -195,6 +199,16 @@ export default function GroupDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Cycle timeline + contribution meter */}
+      <CycleProgress
+        totalCycles={groupInfo.total_cycles}
+        currentCycle={groupInfo.current_cycle}
+        groupState={groupInfo.state}
+        historyCycles={historyCycles}
+        paidCount={paidThisCycle}
+        memberTotal={groupInfo.num_members}
+      />
 
       {/* Actions based on state */}
       {groupInfo.state === "Forming" && !isMember && (
