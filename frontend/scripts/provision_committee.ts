@@ -287,18 +287,24 @@ async function waitForAccount(address: string, timeoutMs = 30_000): Promise<void
 }
 
 async function fundUserUsdc(rec: UserRecord): Promise<void> {
-  // Skip if the user already holds ≥ contribution units.
+  // Skip if the user already holds ≥ funding units of the CORRECT issuer
+  // (wallets may carry stale zero-balance trustlines from earlier misconfig).
   try {
     const acc = await horizon.loadAccount(rec.public);
     const bal = acc.balances.find(
-      (b: { asset_type: string; asset_code?: string }) => b.asset_code === "USDC"
+      (b: { asset_type: string; asset_code?: string; asset_issuer?: string }) =>
+        b.asset_code === "USDC" && b.asset_issuer === USDC_ISSUER
     ) as { balance: string } | undefined;
     if (bal && BigInt(Math.round(Number(bal.balance) * USDC_DECIMALS)) >= FUNDING_UNITS) {
       console.log(`  [wallet] ${rec.public.slice(0, 8)}… already funded`);
       return;
     }
-  } catch {
-    /* fall through and send anyway */
+    if (!bal) {
+      throw new Error(`${rec.public} has no ${USDC_ISSUER.slice(0, 8)}… trustline — cannot fund`);
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("cannot fund")) throw e;
+    /* account read failed — fall through and attempt the send */
   }
   const account = await soroban.getAccount(adminAddress);
   const tx = new TransactionBuilder(account, { fee: TX_FEE, networkPassphrase: PASSPHRASE })
@@ -446,6 +452,37 @@ async function main(): Promise<void> {
     roster.push(rec);
   }
   saveKeyStore(keyStore);
+
+  // Preflight: admin must hold enough USDC for every wallet still needing funds.
+  let needingFunds = 0;
+  for (const rec of roster) {
+    try {
+      const acc = await horizon.loadAccount(rec.public);
+      const bal = acc.balances.find(
+        (b: { asset_type: string; asset_code?: string; asset_issuer?: string }) =>
+          b.asset_code === "USDC" && b.asset_issuer === USDC_ISSUER
+      ) as { balance: string } | undefined;
+      const units = bal ? BigInt(Math.round(Number(bal.balance) * USDC_DECIMALS)) : BigInt(0);
+      if (units < FUNDING_UNITS) needingFunds += 1;
+    } catch {
+      needingFunds += 1;
+    }
+  }
+  if (needingFunds > 0) {
+    const adminAcc = await horizon.loadAccount(adminAddress);
+    const adminBal = adminAcc.balances.find(
+      (b: { asset_type: string; asset_code?: string; asset_issuer?: string }) =>
+        b.asset_code === "USDC" && b.asset_issuer === USDC_ISSUER
+    ) as { balance: string } | undefined;
+    const have = adminBal ? Number(adminBal.balance) : 0;
+    const need = needingFunds * Number(FUNDING_UNITS) / USDC_DECIMALS;
+    if (have < need) {
+      throw new Error(
+        `admin holds ${have} USDC but ${needingFunds} wallets still need funding (${need} total). ` +
+        `Top up at faucet.circle.com or lower --users.`
+      );
+    }
+  }
 
   console.log("[phase 1/3] provisioning wallets");
   for (const rec of roster) {
