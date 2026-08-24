@@ -34,16 +34,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "NEXT_PUBLIC_USDC_CONTRACT env var not configured" }, { status: 500 });
     }
 
+    // Payout configurable via FAUCET_USDC_AMOUNT (default 10) — keeps the
+    // testnet faucet wallet alive across many demo clicks.
+    const payoutUsdc = Number(process.env.FAUCET_USDC_AMOUNT) > 0 ? Number(process.env.FAUCET_USDC_AMOUNT) : 10;
+    const amount = BigInt(payoutUsdc) * BigInt(10_000_000);
+
     console.log(
-      `[FAUCET] Funding ${address} with 50 Soroban USDC from ${sourceAddress}...`
+      `[FAUCET] Funding ${address} with ${payoutUsdc} Soroban USDC from ${sourceAddress}...`
     );
 
     const server = new sdk.rpc.Server(rpcUrl, { allowHttp: false });
     const account = await server.getAccount(sourceAddress);
     const contract = new sdk.Contract(usdcContractId);
-
-    // 50 USDC with 7 decimals (matching classic Stellar asset decimals)
-    const amount = BigInt(50) * BigInt(10_000_000); // 500_000_000
 
     const tx = new sdk.TransactionBuilder(account, {
       fee: "10000000",
