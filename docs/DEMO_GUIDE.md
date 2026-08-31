@@ -9,7 +9,7 @@ Complete walkthrough covering all features, pages, and submission requirements f
 | Resource | Link |
 |----------|------|
 | **Live App** | [chain-chit.vercel.app](https://chain-chit.vercel.app/) |
-| **Pitch Deck** | [View on Canva](https://canva.link/6rhc38gmfemtrzn) |
+| **Pitch Deck** | [View on Canva](https://canva.link/s0ovylmrz1e4gnh) |
 | **Demo Video** | *[YouTube link — paste after upload]* |
 | **README** | [../README.md](../README.md) |
 | **Architecture** | [ARCHITECTURE.md](./ARCHITECTURE.md) |

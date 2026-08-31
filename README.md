@@ -6,10 +6,10 @@
 
 **Live Application**: [chain-chit.vercel.app](https://chain-chit.vercel.app/)
 
-**Demo Video**: *[Watch on YouTube](https://youtu.be/7CMEtcvsuiM)*
-[![Demo Video](https://img.youtube.com/vi/7CMEtcvsuiM/maxresdefault.jpg)](https://youtu.be/7CMEtcvsuiM)
+**Demo Video**: *[Watch on YouTube](https://youtu.be/PG6lmdV_pBI)*
+[![Demo Video](https://img.youtube.com/vi/PG6lmdV_pBI/maxresdefault.jpg)](https://youtu.be/PG6lmdV_pBI)
 
-**Pitch Deck**: [View on Canva](https://canva.link/6rhc38gmfemtrzn)
+**Pitch Deck**: [View on Canva](https://canva.link/s0ovylmrz1e4gnh)
 
 A production-ready decentralized chit fund (committee/rotating savings) platform built on Stellar Soroban smart contracts with a Next.js frontend.
 

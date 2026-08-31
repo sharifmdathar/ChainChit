@@ -47,8 +47,8 @@ Stellar Expert go in `docs/images/`.
 | Blue Belt pitch deck | [`0a80d38`](https://github.com/sharifmdathar/ChainChit/commit/0a80d38) | Submission prep |
 
 ### 6. Marketing & Community
-- Demo video (Blue Belt walkthrough): [youtu.be/7CMEtcvsuiM](https://youtu.be/7CMEtcvsuiM)
-- Pitch deck: [docs/pitch/ChainChit_BlueBelt.pptx](./pitch/ChainChit_BlueBelt.pptx)
+- Demo video (Blue Belt walkthrough): [youtu.be/PG6lmdV_pBI](https://youtu.be/PG6lmdV_pBI)
+- Pitch deck: [docs/pitch/ChainChit Pitch Deck.pptx](./pitch/ChainChit Pitch Deck.pptx)
 
 ### 7. Next Month Targets
 - Export first real form batch; map top themes → GitHub issues → commits
