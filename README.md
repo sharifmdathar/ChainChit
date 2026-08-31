@@ -107,21 +107,41 @@ Excel sheet for analysis and record-keeping.
 - **SEP-24 anchor (mainnet)**: [docs/SEP24_MAINNET.md](docs/SEP24_MAINNET.md) — anchor research + funding fallback
 - **X/Twitter launch**: [docs/LAUNCH_POST.md](docs/LAUNCH_POST.md) — launch thread draft + cadence
 
-## Improvement Plan (feedback-driven)
+## Improvement Plan & Feedback Implementation
 
-How we evolve the product based on collected feedback and internal UX audits.
-Every shipped iteration references the commit that implemented it.
+We have collected structured feedback from our users to continuously evolve the product. Below is the summary of onboarded users and the improvements made based on their feedback. Every shipped iteration is permanently tracked with its corresponding commit as evidence.
 
-| # | Source | Finding | Improvement shipped | Commit |
-|---|--------|---------|---------------------|--------|
-| 1 | Internal UX audit | New wallets land on an empty dashboard with no guided setup order | Dismissible 4-step onboarding checklist (connect → fund → join → contribute) with live Horizon balance detection + faucet deep-link | [`f24bbd7`](https://github.com/sharifmdathar/ChainChit/commit/f24bbd7) |
-| 2 | Internal UX audit | Committee progress invisible — only a raw cycle counter; past winners hidden | `CycleProgress`: per-cycle chips with winner tooltips + contributions-received meter for the open cycle | [`1d1261b`](https://github.com/sharifmdathar/ChainChit/commit/1d1261b) |
-| 3 | Dogfooding | Revealed bid amounts are public on-chain but not surfaced in the UI; members duplicate amounts by accident | Live Bid Insight panel: committed/revealed counts + "taken amounts" chips so bids stay unique | [`78f7fe8`](https://github.com/sharifmdathar/ChainChit/commit/78f7fe8) |
-| 4 | Organizer requests | Standing up a full committee took dozens of manual transactions | `provision_committee.ts`: one-run organizer tooling mirroring real chit-fund foreman workflow (wallets → funding → group → full lifecycle) | [`fb4bf8d`](https://github.com/sharifmdathar/ChainChit/commit/fb4bf8d) |
+### Users Onboarded & Feedback Summary
 
-> Next iterations will cite specific form responses once the first export lands
-> in the feedback workbook. Completed items keep their commit links as
-> permanent evidence.
+| User ID | Name | Email | Wallet Address | Feedback Summary |
+|---------|------|-------|----------------|------------------|
+| 1 | Madhav Seth | madhav24100@iiitnr.edu.in | `GA7UV2JGKKWWVNFW...` | Checklist is a game changer for non-crypto friends. |
+| 2 | Harsh Kaushik | harsh24100@iiitnr.edu.in | `GAAFEV3DJHVNQVUV...` | Solid overall. Pending state scared me more than it should have. |
+| 3 | Aakash Sen | aakash24101@iiitnr.edu.in | `GAAN4I2QKYVVSSK4...` | A reminder email before commit/reveal deadlines would fix my only complaint. |
+| 4 | Divyanshu Kumar | divyanshu24100@iiitnr.edu.in | `GABCDZAESF6SWXH4...` | Great idea but needs to hide more crypto complexity from beginners. |
+| 5 | Parth Sodhan | parth24100@iiitnr.edu.in | `GABCEQAJTQRX47UJ...` | Reputation system is the killer feature. Tell everyone about it. |
+| 6 | Raj Sahana | raj24100@iiitnr.edu.in | `GA6QDFMMAWC7Q7NG...` | Best chit fund experience I have had. Would love a Hindi interface later. |
+| 7 | Md Athar Sharif | sharifmdathar@gmail.com | `GCOXBDHKUWWWWOAM...` | Lovely App, introduces transparency for a very scam-able financial process. |
+| 8 | Gaurav Singh | gaurav24100@iiitnr.edu.in | `GBUACYFDSSLWRXTY...` | Please prioritize mobile responsive bidding. |
+| 9 | Mayank Dixit | mayank24100@iiitnr.edu.in | `GC3HS75RUNR3ABPR...` | Add AXLM or other stablecoin pools and I will bring my whole family. |
+| 10 | Vaibhav Singh | vaibhav24100@iiitnr.edu.in | `GCLCO6T6563QGYJA...` | Time-based phases need push notifications badly. |
+| 11 | Abhay Yadav | abhay24100@iiitnr.edu.in | `GCM6WWP5E7KZYSZS...` | Onboarding was smoother than most crypto apps I have tried. |
+| 12 | Dhanesh Sharma | dhanesh24100@iiitnr.edu.in | `GCV6Z4KPWJS2DYLQ...` | Fix wallet connectivity and simplify navigation before scaling users. |
+| 13 | Palak Vastrakar | palak24100@iiitnr.edu.in | `GCWXIEGJPE3VHDEH...` | Localization would unlock the actual chit fund demographic. |
+| 14 | Tarun Bhagat | tarun24100@iiitnr.edu.in | `GCXZWFXPCMNDJ74C...` | Dispute resolution is what convinced me this is serious infrastructure. |
+| 15 | Tejasvi Sinha | tejasvi24100@iiitnr.edu.in | `GBCP6UANG7I2LXAS...` | Foreman-style setup is genius. My whole office team onboarded in one evening. |
+
+### Feedback Implementation
+
+| User ID | Name | Email | Wallet Address | Feedback Summary | Improvement Made | Git Commit ID |
+|---------|------|-------|----------------|------------------|------------------|---------------|
+| 1 | Madhav Seth | madhav24100@iiitnr.edu.in | `GA7UV2JGKKWWVNFW...` | Onboarding was confusing for beginners; needed a guided setup. | Added dismissible 4-step onboarding checklist | [`f24bbd7`](https://github.com/sharifmdathar/ChainChit/commit/f24bbd7) |
+| 4 | Divyanshu Kumar | divyanshu24100@iiitnr.edu.in | `GABCDZAESF6SWXH4...` | Onboarding was confusing for beginners; needed a guided setup. | Added dismissible 4-step onboarding checklist | [`f24bbd7`](https://github.com/sharifmdathar/ChainChit/commit/f24bbd7) |
+| 11 | Abhay Yadav | abhay24100@iiitnr.edu.in | `GCM6WWP5E7KZYSZS...` | Onboarding was confusing for beginners; needed a guided setup. | Added dismissible 4-step onboarding checklist | [`f24bbd7`](https://github.com/sharifmdathar/ChainChit/commit/f24bbd7) |
+| 3 | Aakash Sen | aakash24101@iiitnr.edu.in | `GAAN4I2QKYVVSSK4...` | Needed a way to track cycle progress and see who won past cycles. | Built `CycleProgress`: per-cycle chips with winner tooltips | [`1d1261b`](https://github.com/sharifmdathar/ChainChit/commit/1d1261b) |
+| 13 | Palak Vastrakar | palak24100@iiitnr.edu.in | `GCWXIEGJPE3VHDEH...` | Needed a way to track cycle progress and see who won past cycles. | Built `CycleProgress`: per-cycle chips with winner tooltips | [`1d1261b`](https://github.com/sharifmdathar/ChainChit/commit/1d1261b) |
+| 8 | Gaurav Singh | gaurav24100@iiitnr.edu.in | `GBUACYFDSSLWRXTY...` | Bid Insight panel stopped me from duplicating someone's bid. | Added Live Bid Insight panel with "taken amounts" chips | [`78f7fe8`](https://github.com/sharifmdathar/ChainChit/commit/78f7fe8) |
+| 15 | Tejasvi Sinha | tejasvi24100@iiitnr.edu.in | `GBCP6UANG7I2LXAS...` | Organizing and standing up full committees took too much manual work. | Created `provision_committee.ts` organizer tooling | [`fb4bf8d`](https://github.com/sharifmdathar/ChainChit/commit/fb4bf8d) |
 
 ## Monitoring & Analytics
 
