@@ -9,7 +9,7 @@ Complete walkthrough covering all features, pages, and submission requirements f
 | Resource | Link |
 |----------|------|
 | **Live App** | [chain-chit.vercel.app](https://chain-chit.vercel.app/) |
-| **Pitch Deck** | [ChainChit_Pitch_Deck.pptx](./ChainChit_Pitch_Deck.pptx) |
+| **Pitch Deck** | [View on Canva](https://canva.link/6rhc38gmfemtrzn) |
 | **Demo Video** | *[YouTube link — paste after upload]* |
 | **README** | [../README.md](../README.md) |
 | **Architecture** | [ARCHITECTURE.md](./ARCHITECTURE.md) |
@@ -209,7 +209,7 @@ Save screenshots in `docs/screenshots/` and reference them in the README.
 - [ ] **Screenshots**: Capture + add to `docs/screenshots/`
 
 ### Level 5 — Blue Belt
-- [x] **Pitch deck**: `docs/ChainChit_Pitch_Deck.pptx` (13 slides)
+- [x] **Pitch deck**: [View on Canva](https://canva.link/6rhc38gmfemtrzn) (13 slides)
 - [x] **20+ commits**: 60+ commits
 - [ ] **50 testnet users**: Need 37 more funded wallets with interactions
 - [ ] **Google Form**: For user feedback collection

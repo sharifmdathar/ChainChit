@@ -9,7 +9,7 @@
 **Demo Video**: *[Watch on YouTube](https://youtu.be/7CMEtcvsuiM)*
 [![Demo Video](https://img.youtube.com/vi/7CMEtcvsuiM/maxresdefault.jpg)](https://youtu.be/7CMEtcvsuiM)
 
-**Pitch Deck**: [docs/pitch/ChainChit_BlueBelt.pptx](docs/pitch/ChainChit_BlueBelt.pptx)
+**Pitch Deck**: [View on Canva](https://canva.link/6rhc38gmfemtrzn)
 
 A production-ready decentralized chit fund (committee/rotating savings) platform built on Stellar Soroban smart contracts with a Next.js frontend.
 
