@@ -1,0 +1,33 @@
+# systemd USER service for the ChainChit Phase Transition Keeper (oneshot).
+#
+# Runs one sweep and exits; the companion .timer decides when. Keep the admin
+# key OUT of this file — it lives in the EnvironmentFile below.
+#
+# Install (as your normal user, no sudo):
+#   mkdir -p ~/.config/systemd/user
+#   cp scripts/systemd/chainchit-keeper.{service,timer} ~/.config/systemd/user/
+#   cp scripts/systemd/chainchit-keeper.env.example ~/.config/chainchit-keeper.env
+#   chmod 600 ~/.config/chainchit-keeper.env   # then edit in your real SOROBAN_SECRET_KEY
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now chainchit-keeper.timer
+#
+# NOTE: PATH points at the mise-managed node. If `mise` upgrades node, update
+# the version segment (…/node/<ver>/bin). Verify with: command -v node
+
+[Unit]
+Description=ChainChit Phase Transition Keeper (one sweep)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/repos/ChainChit/frontend
+Environment=PATH=%h/.local/share/mise/installs/node/26.8.1/bin:/usr/bin:/bin
+EnvironmentFile=%h/.config/chainchit-keeper.env
+ExecStart=%h/.local/share/mise/installs/node/26.8.1/bin/npx tsx scripts/keeper.ts --once
+StandardOutput=journal
+StandardError=journal
+
+# Hardening: the keeper only needs to read its own repo + state file.
+NoNewPrivileges=true
+PrivateTmp=true

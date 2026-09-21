@@ -4,6 +4,8 @@ Pre-deployment checklist for ChainChit smart contracts and frontend.
 
 **Audit date:** 2026-08-20 · **Method:** full source read of all 5 contracts + frontend, live execution of `cargo test`, `stellar contract build`, `npm run build`
 
+**Amendment 2026-09-22:** `chit_group` lifecycle hardened (see Finding #10) — **requires a contract rebuild + redeploy**; existing groups on the old wasm have no on-chain collection deadline.
+
 | Verdict | Count |
 |---|---|
 | ✅ PASS | 53 |
@@ -21,7 +23,11 @@ Pre-deployment checklist for ChainChit smart contracts and frontend.
 6. **MEDIUM — Weak bid-nonce entropy.** Frontend used `Math.random()` (53 bits, non-CSPRNG). **Fixed** (`frontend/src/components/BiddingPanel.tsx`): `crypto.getRandomValues` 53-bit nonce.
 7. **MEDIUM — `any` types despite strict mode.** 6 sites. **Fixed** (`utils.ts`, `stellar.ts`, `contracts.ts`, group page, create-group page, faucet route) — build type-checks clean.
 8. **LOW — Identity duplicate-attestation test was an empty stub.** **Fixed** (`contracts/identity/src/lib.rs`): real test with mock reputation, `test_duplicate_attestation_rejected` now exercises the duplicate path.
-9. **LOW — Known risk, not yet fixed:** if `execute_payout` finds `NoValidBids` (#23), funds stay locked in `Bidding` with no refund path. Deferred — needs design decision (admin refund escape hatch).
+9. **LOW — Known risk, not yet fixed:** if `execute_payout` finds `NoValidBids` (#23), funds stay locked in `Bidding` with no refund path. Deferred — needs design decision (admin refund escape hatch). *Partially mitigated by Finding #10:* once defaulters can be cleared, a fully-funded cycle can no longer be blocked by a non-payer; the residual case is now "payers bid but never reveal."
+10. **MEDIUM — No way to advance a `Collecting` cycle past a defaulter (permanent stall).** The only `Collecting→Bidding` edge was the all-paid auto-transition, so a single non-payer froze the group forever. **Fixed** (`contracts/chit_group/src/lib.rs`): `start_collection`/`advance_cycle` now arm an on-chain `collection_deadline` (admin-tunable via `set_collection_window`, default 7 days); a permissionless `begin_bidding_after_deadline()` marks non-payers `Defaulted` and advances to `Bidding`. Two companion fixes were **required** to make this safe:
+    - `execute_payout` sizes the pool to the **actual paid count** (was `num_members`). Sizing to `num_members` was a latent **over-withdraw** bug the instant a cycle could reach `Bidding` with defaulters present (it would try to transfer more than the contract holds and revert, or worse).
+    - `commit_bid` is gated to members who **paid this cycle** (`NotPaid` #29), so a defaulter cannot win a pool it did not fund.
+    Covered by 4 integration tests: `test_all_paid_autotransitions_to_bidding`, `test_deadline_advances_with_defaulters_and_rebases_pool`, `test_begin_bidding_before_deadline_rejected`, `test_defaulter_cannot_bid` (all green, `cargo test -p chit_group`).
 
 ---
 
@@ -30,7 +36,7 @@ Pre-deployment checklist for ChainChit smart contracts and frontend.
 ### Access Control
 
 - [x] **PASS** — All mutating functions call `require_auth()` on caller/admin.
-  Evidence: `chit_group/src/lib.rs:133,176,225,272,357,435,488,626,658,677,713`; `reputation/src/lib.rs:72,86,101,128` (+`ensure_authorized` on `record_*`); `identity/src/lib.rs:64,80,183,204`; `dispute/src/lib.rs:99,122,137,201,268,320,351`; `factory/src/lib.rs:40,64,143`. *Exception:* `execute_payout` (`chit_group:538`) permissionless by design — anyone can trigger payout.
+  Evidence: `chit_group/src/lib.rs:133,176,225,272,357,435,488,626,658,677,713`; `reputation/src/lib.rs:72,86,101,128` (+`ensure_authorized` on `record_*`); `identity/src/lib.rs:64,80,183,204`; `dispute/src/lib.rs:99,122,137,201,268,320,351`; `factory/src/lib.rs:40,64,143`. *Exceptions (permissionless by design):* `execute_payout` — anyone can trigger payout; `begin_bidding_after_deadline` — anyone can force-advance a Collecting cycle once its on-chain deadline has passed (Finding #10).
 - [x] **PASS** — Admin-only functions check `caller == admin`.
   Evidence: `chit_group:233,365,666,685,721`; `reputation:92,134`; `identity:189,210`; `dispute:128,275,326,356`; `factory:149`.
 - [x] **PASS** — Reputation `record_*` restricted to authorized group contracts.
@@ -80,7 +86,7 @@ Pre-deployment checklist for ChainChit smart contracts and frontend.
 - [x] **PASS** — All state transitions explicitly check current state.
   Evidence: `NotForming` (`chit_group:184`), `NotCollecting` (`:280`), `NotBidding` (`:443,496`), `NotPayout` (`:368`). `raise_dispute` rejects `Completed` and `Paused`.
 - [x] **PASS** — No way to skip states.
-  Normal flow strictly gated (Forming→Collecting→Bidding→Payout→Completed). `unpause` restores the recorded pre-pause state — admin can no longer jump to an arbitrary state (Finding #5).
+  Normal flow strictly gated (Forming→Collecting→Bidding→Payout→Completed). `unpause` restores the recorded pre-pause state — admin can no longer jump to an arbitrary state (Finding #5). `begin_bidding_after_deadline` adds a *second legitimate* `Collecting→Bidding` edge (Finding #10), reachable only after the on-chain deadline and only to mark non-payers `Defaulted` — it is not a state skip.
 - [x] **PASS** — Pause blocks all state transitions except `unpause`.
   `raise_dispute` now rejects `Paused` (`chit_group:640-642`); all other mutations fail state checks against `Paused`. Verified by `test_raise_dispute_paused`.
 - [x] **PASS** — Unpause returns to the state that was active before pause.
@@ -97,7 +103,7 @@ Pre-deployment checklist for ChainChit smart contracts and frontend.
 - [x] **PASS** — Contribution transfers only in `Collecting` via `pay_contribution`.
   Evidence: `NotCollecting` gate (`chit_group:280`); only inbound transfer at `:302-308`.
 - [x] **PASS** — No token balance locked after `Completed`.
-  The `all_paid` gate (`chit_group:329-350`) guarantees full collection; payout moves the full pool (`checked_mul` `:594-596`); balance returns to zero before `Completed`. *Caveat:* `NoValidBids` (`:591`) can strand funds pre-Completed — known risk, see Findings #9.
+  The `all_paid` gate (`chit_group`) guarantees full collection on the happy path, and `begin_bidding_after_deadline` clears defaulters on the timeout path (Finding #10). `execute_payout` moves a pool sized to the **actual paid count** (`checked_mul`), so it never over-withdraws when defaulters are present; balance returns to zero before `Completed`. *Caveat:* `NoValidBids` can still strand funds pre-Completed if payers never reveal bids — known risk, see Findings #9/#10.
 
 ### Storage
 

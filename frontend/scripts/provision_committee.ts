@@ -81,6 +81,12 @@ const CYCLES = Math.floor(arg("cycles", 2));
 const CONTRIBUTION_USDC = arg("contribution", 2.5); // whole USDC per cycle
 const FUNDING_USDC_PER_USER = arg("fund-usdc", 10); // headroom: contributions + fees
 
+// --join-only: create + friendbot-fund wallets and join them to groups, but do
+// NOT top up USDC or drive contribute/bid/payout cycles. Produces real on-chain
+// joins with zero admin USDC cost; the Phase Transition Keeper then advances the
+// groups later. Requires min_attestation_score = 0 groups (factory default).
+const JOIN_ONLY = process.argv.includes("--join-only");
+
 // Contract constraints (chit_group::initialize): num_members >= 2, total_cycles >= 2.
 if (CYCLES < 2) {
   throw new Error("--cycles must be >= 2: chit_group contract rejects total_cycles < 2 (Error #19)");
@@ -427,20 +433,43 @@ function scU64(v: bigint): xdr.ScVal {
 // ---------------------------------------------------------------------------
 
 function writeLedger(groups: { id: string; members: UserRecord[] }[]): void {
-  const rows: string[] = [
-    "#,wallet_address,group_contract,fund_tx,join_tx,joined_date,status",
-  ];
-  let n = 0;
-  for (const g of groups) {
-    for (const m of g.members) {
-      n += 1;
-      rows.push(
-        [n, m.public, g.id, m.fundingTx ?? "", m.joinTx ?? "", new Date().toISOString().slice(0, 10), "onboarded"].join(",")
-      );
+  const header = "#,wallet_address,group_contract,fund_tx,join_tx,joined_date,status";
+
+  // Preserve any previously-recorded users so a fresh cohort APPENDS instead of
+  // clobbering earlier evidence. Rows are de-duped by wallet address; this run's
+  // values win for addresses it touches.
+  const byAddress = new Map<string, string[]>();
+  const order: string[] = [];
+  if (fs.existsSync(LEDGER_FILE)) {
+    for (const line of fs.readFileSync(LEDGER_FILE, "utf8").split("\n")) {
+      const t = line.trim();
+      if (!t || t.startsWith("#") && !t.startsWith("#,wallet")) continue;
+      const cols = t.split(",");
+      if (cols[1] && cols[1].startsWith("G") && cols[1].length === 56) {
+        byAddress.set(cols[1], cols);
+        order.push(cols[1]);
+      }
     }
   }
+
+  for (const g of groups) {
+    for (const m of g.members) {
+      const cols = ["", m.public, g.id, m.fundingTx ?? "", m.joinTx ?? "", new Date().toISOString().slice(0, 10), "onboarded"];
+      if (!order.includes(m.public)) order.push(m.public);
+      byAddress.set(m.public, cols);
+    }
+  }
+
+  const rows: string[] = [header];
+  let n = 0;
+  for (const address of order) {
+    n += 1;
+    const cols = byAddress.get(address)!;
+    cols[0] = String(n); // renumber sequentially across all cohorts
+    rows.push(cols.join(","));
+  }
   fs.writeFileSync(LEDGER_FILE, rows.join("\n") + "\n");
-  console.log(`\n[ledger] wrote ${n} users → ${LEDGER_FILE}`);
+  console.log(`\n[ledger] wrote ${n} users (this run + prior) → ${LEDGER_FILE}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -466,7 +495,7 @@ async function resolveGroupForChunk(chunk: UserRecord[], adoptable: string[]): P
 }
 
 async function main(): Promise<void> {
-  console.log(`ChainChit committee provisioning — ${TOTAL_USERS} users, groups of ${GROUP_SIZE}, ${CYCLES} cycles, testnet`);
+  console.log(`ChainChit committee provisioning — ${TOTAL_USERS} users, groups of ${GROUP_SIZE}, ${CYCLES} cycles, testnet${JOIN_ONLY ? " [JOIN-ONLY: no USDC funding, no bid/payout]" : ""}`);
   console.log(`admin: ${adminAddress}\n`);
 
   const keyStore = loadKeyStore();
@@ -497,7 +526,7 @@ async function main(): Promise<void> {
       needingFunds += 1;
     }
   }
-  if (needingFunds > 0) {
+  if (!JOIN_ONLY && needingFunds > 0) {
     const adminAcc = await horizon.loadAccount(adminAddress);
     const adminBal = adminAcc.balances.find(
       (b: { asset_type: string; asset_code?: string; asset_issuer?: string }) =>
@@ -517,7 +546,7 @@ async function main(): Promise<void> {
   for (const rec of roster) {
     try {
       await ensureWallet(rec);
-      await fundUserUsdc(rec);
+      if (!JOIN_ONLY) await fundUserUsdc(rec);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error(`  ERROR wallet ${rec.public}: ${msg}`);
@@ -560,7 +589,7 @@ async function main(): Promise<void> {
   }
 
   // 3) Drive lifecycle
-  console.log("\n[phase 3/3] driving group lifecycles");
+  console.log(JOIN_ONLY ? "\n[phase 3/3] joining members (lifecycle skipped)" : "\n[phase 3/3] driving group lifecycles");
   for (const g of groups) {
     console.log(`[group] ${g.id} — ${g.members.length} members`);
     const before = await memberCount(g.id);
@@ -580,7 +609,7 @@ async function main(): Promise<void> {
         await sleep(400);
       }
     }
-    await driveGroupLifecycleResumeAware(g.id, g.members, keyStore);
+    if (!JOIN_ONLY) await driveGroupLifecycleResumeAware(g.id, g.members, keyStore);
     saveKeyStore(keyStore);
   }
 

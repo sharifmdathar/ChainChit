@@ -5,6 +5,11 @@ use soroban_sdk::{
     Vec, symbol_short,
 };
 
+/// Default seconds a cycle may sit in `Collecting` before anyone may force it
+/// to `Bidding` (marking non-payers as `Defaulted`). Admin may override via
+/// `set_collection_window`, which applies to the next deadline that is armed.
+const DEFAULT_COLLECTION_WINDOW: u64 = 7 * 24 * 60 * 60; // 7 days
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -71,6 +76,8 @@ pub enum DataKey {
     Cycle(u32),           // CycleState
     MemberIndex(Address), // u32 — index in members vec
     PrePauseState,        // GroupState — state active before emergency pause
+    CollectionDeadline,   // u64 ledger timestamp ending the current Collecting window
+    CollectionWindow,     // u64 seconds — admin-tunable window length (absent → default)
 }
 
 // ---------------------------------------------------------------------------
@@ -106,6 +113,9 @@ pub enum Error {
     AlreadyCompleted = 24,
     ReputationTooLow = 25,
     AlreadyRevealed = 26,
+    DeadlineNotReached = 27,
+    NothingCollected = 28,
+    NotPaid = 29,
 }
 
 // ---------------------------------------------------------------------------
@@ -262,6 +272,115 @@ impl ChitGroupContract {
         env.storage()
             .instance()
             .set(&DataKey::Cycle(1), &cycle);
+
+        Self::arm_collection_deadline(&env);
+
+        Ok(())
+    }
+
+    /// Arm (or re-arm) the deadline for the current `Collecting` window using
+    /// the admin-tunable `CollectionWindow` if present, else the default.
+    fn arm_collection_deadline(env: &Env) {
+        let window: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::CollectionWindow)
+            .unwrap_or(DEFAULT_COLLECTION_WINDOW);
+        let deadline = env.ledger().timestamp().saturating_add(window);
+        env.storage()
+            .instance()
+            .set(&DataKey::CollectionDeadline, &deadline);
+    }
+
+    /// Admin-tunable length (seconds) of each `Collecting` window. Applies to
+    /// the next deadline that is armed (i.e. the next `start_collection` /
+    /// `advance_cycle`), not the currently-running one.
+    pub fn set_collection_window(env: Env, caller: Address, window: u64) -> Result<(), Error> {
+        caller.require_auth();
+        let info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+        if caller != info.admin {
+            return Err(Error::NotAdmin);
+        }
+        if window == 0 {
+            return Err(Error::InvalidAmount);
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::CollectionWindow, &window);
+        Ok(())
+    }
+
+    /// View: the timestamp the current `Collecting` window ends, if armed.
+    pub fn get_collection_deadline(env: Env) -> Option<u64> {
+        env.storage().instance().get(&DataKey::CollectionDeadline)
+    }
+
+    /// Permissionless: once the collection deadline has passed, force the
+    /// cycle from `Collecting` to `Bidding`, marking every member who has not
+    /// paid as `Defaulted`. This is the escape hatch for the case where one or
+    /// more members never pay and so the all-paid auto-transition in
+    /// `pay_contribution` never fires. Defaults are recorded to reputation at
+    /// cycle end by `advance_cycle` (which reads these statuses), so this fn
+    /// deliberately does NOT call record_default itself.
+    pub fn begin_bidding_after_deadline(env: Env) -> Result<(), Error> {
+        let mut info: GroupInfo = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupInfo)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if info.state != GroupState::Collecting {
+            return Err(Error::NotCollecting);
+        }
+
+        let deadline: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::CollectionDeadline)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        if env.ledger().timestamp() < deadline {
+            return Err(Error::DeadlineNotReached);
+        }
+
+        let members: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&DataKey::Members)
+            .ok_or(Error::ContractNotRegistered)?;
+
+        let cycle_key = DataKey::Cycle(info.current_cycle);
+        let mut cycle: CycleState = env
+            .storage()
+            .instance()
+            .get(&cycle_key)
+            .ok_or(Error::CycleNotFound)?;
+
+        // Mark non-payers Defaulted; count actual payers to size the pool later.
+        let mut paid_count: u32 = 0;
+        for i in 0..members.len() {
+            let m = members.get(i).unwrap();
+            let status = cycle.payments.get(m.clone()).unwrap_or(MemberStatus::Pending);
+            if status == MemberStatus::Paid {
+                paid_count += 1;
+            } else {
+                cycle.payments.set(m, MemberStatus::Defaulted);
+            }
+        }
+
+        // A cycle with zero contributions cannot pay anyone out.
+        if paid_count == 0 {
+            return Err(Error::NothingCollected);
+        }
+
+        env.storage().instance().set(&cycle_key, &cycle);
+
+        info.state = GroupState::Bidding;
+        env.storage().instance().set(&DataKey::GroupInfo, &info);
 
         Ok(())
     }
@@ -427,6 +546,8 @@ impl ChitGroupContract {
             .instance()
             .set(&DataKey::Cycle(info.current_cycle), &new_cycle);
 
+        Self::arm_collection_deadline(&env);
+
         Ok(())
     }
 
@@ -459,6 +580,16 @@ impl ChitGroupContract {
             .instance()
             .get(&cycle_key)
             .ok_or(Error::CycleNotFound)?;
+
+        // Only members who actually paid this cycle may bid: a defaulter must
+        // not be able to win a pool they did not contribute to.
+        if cycle
+            .payments
+            .get(caller.clone())
+            .map_or(true, |s| s != MemberStatus::Paid)
+        {
+            return Err(Error::NotPaid);
+        }
 
         if cycle.bids.get(caller.clone()).is_some() {
             return Err(Error::AlreadyCommitted);
@@ -591,9 +722,27 @@ impl ChitGroupContract {
 
         let winner_addr = winner.ok_or(Error::NoValidBids)?;
 
-        // Payout: transfer pool to winner
+        // Payout: transfer pool to winner. The pool is sized by the number of
+        // members who actually paid this cycle, NOT num_members — once a cycle
+        // can reach Bidding with defaulters (via begin_bidding_after_deadline)
+        // the contract only holds contribution_amount * paid_count tokens.
+        let mut paid_count: u32 = 0;
+        for i in 0..members.len() {
+            let m = members.get(i).unwrap();
+            if cycle
+                .payments
+                .get(m)
+                .map_or(false, |s| s == MemberStatus::Paid)
+            {
+                paid_count += 1;
+            }
+        }
+        if paid_count == 0 {
+            return Err(Error::NothingCollected);
+        }
+
         let pool_size = (info.contribution_amount as u128)
-            .checked_mul(info.num_members as u128)
+            .checked_mul(paid_count as u128)
             .ok_or(Error::InvalidAmount)? as u64;
 
         Self::transfer_token(
@@ -1361,5 +1510,215 @@ mod test {
         let member = Address::generate(&env);
         let result = client.try_get_member_payment_status(&1_u32, &member);
         assert!(result.is_err());
+    }
+
+    // ------------------- Lifecycle integration harness -------------------
+    //
+    // The prior tests only cover negative/state-guard paths. These exercise
+    // the two real Collecting->Bidding transitions end to end, which requires
+    // stand-ins for the token and reputation contracts that pay_contribution /
+    // execute_payout call cross-contract.
+
+    #[contract]
+    pub struct MockToken;
+
+    #[contracttype]
+    #[derive(Clone)]
+    enum TokenKey {
+        Balances,
+    }
+
+    #[contractimpl]
+    impl MockToken {
+        pub fn mint(env: Env, to: Address, amount: i128) {
+            let mut bal: Map<Address, i128> = env
+                .storage()
+                .instance()
+                .get(&TokenKey::Balances)
+                .unwrap_or_else(|| Map::new(&env));
+            let cur = bal.get(to.clone()).unwrap_or(0);
+            bal.set(to, cur + amount);
+            env.storage().instance().set(&TokenKey::Balances, &bal);
+        }
+
+        pub fn transfer(env: Env, from: Address, to: Address, amount: i128) {
+            let mut bal: Map<Address, i128> = env
+                .storage()
+                .instance()
+                .get(&TokenKey::Balances)
+                .unwrap_or_else(|| Map::new(&env));
+            let f = bal.get(from.clone()).unwrap_or(0);
+            assert!(f >= amount, "MockToken: insufficient balance");
+            let t = bal.get(to.clone()).unwrap_or(0);
+            bal.set(from, f - amount);
+            bal.set(to, t + amount);
+            env.storage().instance().set(&TokenKey::Balances, &bal);
+        }
+
+        pub fn balance(env: Env, addr: Address) -> i128 {
+            let bal: Map<Address, i128> = env
+                .storage()
+                .instance()
+                .get(&TokenKey::Balances)
+                .unwrap_or_else(|| Map::new(&env));
+            bal.get(addr).unwrap_or(0)
+        }
+    }
+
+    #[contract]
+    pub struct MockReputation;
+
+    #[contractimpl]
+    impl MockReputation {
+        pub fn record_payment(_env: Env, _group: Address, _member: Address, _on_time: bool) {}
+        pub fn record_default(_env: Env, _group: Address, _member: Address) {}
+        pub fn record_bid_won(_env: Env, _group: Address, _member: Address) {}
+        pub fn record_group_cycle_completed(_env: Env, _group: Address, _member: Address) {}
+        pub fn get_on_time_ratio(_env: Env, _member: Address) -> u32 {
+            1000
+        }
+    }
+
+    /// Register a group with a mock token + reputation, seed `n` members, and
+    /// fund each with `contribution` tokens. Returns the member addresses.
+    fn funded_group(
+        env: &Env,
+        contribution: u64,
+        n: u32,
+    ) -> (Address, ChitGroupContractClient<'_>, MockTokenClient<'_>, Vec<Address>) {
+        let token_id = env.register(MockToken, ());
+        let rep_id = env.register(MockReputation, ());
+        let identity = Address::generate(env);
+        let dispute = Address::generate(env);
+        let admin = Address::generate(env);
+
+        let contract_id = env.register(ChitGroupContract, ());
+        let client = ChitGroupContractClient::new(env, &contract_id);
+        env.mock_all_auths();
+        client.initialize(
+            &admin, &token_id, &rep_id, &identity, &dispute,
+            &contribution, &n, &2_u32, &0_u32, &0_u32,
+        );
+
+        let mut members: Vec<Address> = Vec::new(env);
+        members.push_back(admin.clone());
+        for _ in 1..n {
+            members.push_back(Address::generate(env));
+        }
+        let roster: Vec<Address> = members.clone();
+        env.as_contract(&contract_id, || {
+            let mut vec_members: Vec<Address> = Vec::new(env);
+            for i in 0..roster.len() {
+                let m = roster.get(i).unwrap();
+                vec_members.push_back(m.clone());
+                env.storage()
+                    .instance()
+                    .set(&DataKey::MemberIndex(m.clone()), &(i as u32));
+            }
+            env.storage().instance().set(&DataKey::Members, &vec_members);
+        });
+
+        let tclient = MockTokenClient::new(env, &token_id);
+        for i in 0..roster.len() {
+            tclient.mint(&roster.get(i).unwrap(), &(contribution as i128));
+        }
+
+        (contract_id, client, tclient, roster)
+    }
+
+    #[test]
+    fn test_all_paid_autotransitions_to_bidding() {
+        let env = Env::default();
+        let (_, client, _, roster) = funded_group(&env, 1000, 3);
+        let (m1, m2, m3) = (roster.get(0).unwrap(), roster.get(1).unwrap(), roster.get(2).unwrap());
+
+        client.start_collection(&m1);
+        assert_eq!(client.get_group_info().state, GroupState::Collecting);
+
+        client.pay_contribution(&m1);
+        client.pay_contribution(&m2);
+        // One member still outstanding -> must remain in Collecting.
+        assert_eq!(client.get_group_info().state, GroupState::Collecting);
+
+        // Final payer trips the on-chain auto-transition, no admin needed.
+        client.pay_contribution(&m3);
+        assert_eq!(client.get_group_info().state, GroupState::Bidding);
+    }
+
+    #[test]
+    fn test_deadline_advances_with_defaulters_and_rebases_pool() {
+        let env = Env::default();
+        let (_, client, tclient, roster) = funded_group(&env, 1000, 3);
+        let payer = roster.get(0).unwrap();
+        let defaulter = roster.get(1).unwrap();
+
+        // Short window so the deadline is easy to cross deterministically.
+        client.set_collection_window(&payer, &100_u64);
+        client.start_collection(&payer);
+
+        client.pay_contribution(&payer);
+        assert_eq!(client.get_group_info().state, GroupState::Collecting);
+
+        let deadline = client.get_collection_deadline().unwrap();
+
+        // Only the one payer contributes; the other two never pay.
+        env.ledger().set_timestamp(deadline);
+        client.begin_bidding_after_deadline();
+        assert_eq!(client.get_group_info().state, GroupState::Bidding);
+
+        // Non-payers are now flagged Defaulted.
+        assert_eq!(
+            client.get_member_payment_status(&1_u32, &defaulter),
+            MemberStatus::Defaulted
+        );
+
+        // The single payer bids and wins; pool must be sized to the ONE payer
+        // (1000), not num_members (3x1000), or the transfer would over-withdraw.
+        let commitment = ChitGroupContract::compute_commitment(&env, 500, 1);
+        client.commit_bid(&payer, &commitment);
+        client.reveal_bid(&payer, &500_u64, &1_u64);
+        client.execute_payout();
+
+        assert_eq!(client.get_group_info().state, GroupState::Payout);
+        // payer contributed 1000 (balance 0) and now receives the 1000 pool.
+        assert_eq!(tclient.balance(&payer), 1000_i128);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #27)")]
+    fn test_begin_bidding_before_deadline_rejected() {
+        let env = Env::default();
+        let (_, client, _, roster) = funded_group(&env, 1000, 3);
+        let payer = roster.get(0).unwrap();
+
+        client.set_collection_window(&payer, &100_u64);
+        client.start_collection(&payer);
+        client.pay_contribution(&payer);
+
+        let deadline = client.get_collection_deadline().unwrap();
+        env.ledger().set_timestamp(deadline - 1);
+        // Deadline not yet reached -> DeadlineNotReached (#27).
+        client.begin_bidding_after_deadline();
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #29)")]
+    fn test_defaulter_cannot_bid() {
+        let env = Env::default();
+        let (_, client, _, roster) = funded_group(&env, 1000, 3);
+        let payer = roster.get(0).unwrap();
+        let defaulter = roster.get(1).unwrap();
+
+        client.set_collection_window(&payer, &100_u64);
+        client.start_collection(&payer);
+        client.pay_contribution(&payer);
+
+        let deadline = client.get_collection_deadline().unwrap();
+        env.ledger().set_timestamp(deadline);
+        client.begin_bidding_after_deadline();
+
+        // defaulter never paid, so it may not compete for the pool -> NotPaid (#29).
+        let commitment = ChitGroupContract::compute_commitment(&env, 500, 7);
+        client.commit_bid(&defaulter, &commitment);
     }
 }

@@ -9,3 +9,4 @@ soroban-sqlite*.db
 *.log
 *.tsbuildinfo
 .provision-keys.local.json
+.keeper-state.local.json

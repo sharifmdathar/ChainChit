@@ -38,6 +38,7 @@ Transition from `Forming` to `Collecting`. All member slots must be filled.
 
 - **Requires:** `caller.require_auth()`, caller must be admin.
 - **Errors:** `NotForming`, `NotAdmin`, `GroupNotFull`.
+- **Side Effects:** Arms an on-chain `collection_deadline = now + window` (see `set_collection_window`; default 7 days).
 
 #### `pay_contribution(env, caller: Address) -> Result<(), Error>`
 
@@ -53,7 +54,25 @@ Move to the next cycle after payout is complete.
 
 - **Requires:** `caller.require_auth()`, caller must be admin.
 - **Errors:** `NotPayout`, `NotAdmin`.
-- **Side Effects:** Calls `Reputation::record_group_cycle_completed()` for all paid members. Transitions to `Completed` on the final cycle.
+- **Side Effects:** Calls `Reputation::record_group_cycle_completed()` for paid members and `Reputation::record_default()` for members who did not pay (including those flagged `Defaulted` by `begin_bidding_after_deadline`). Re-arms the `collection_deadline` for the next cycle. Transitions to `Completed` on the final cycle.
+
+#### `begin_bidding_after_deadline(env) -> Result<(), Error>`
+
+**Permissionless** escape hatch for a `Collecting` cycle where one or more members never pay. Once the on-chain `collection_deadline` has passed, anyone may call this to force the cycle to `Bidding`; every non-payer is marked `Defaulted`. This complements the all-paid auto-transition in `pay_contribution` (which can never fire while a defaulter is outstanding).
+
+- **Requires:** none (no auth argument). State must be `Collecting` and `ledger.timestamp() >= collection_deadline`.
+- **Errors:** `NotCollecting`, `DeadlineNotReached`, `NothingCollected` (nobody funded the cycle — nothing can be paid out).
+- **Side Effects:** Sets non-payers to `Defaulted`, transitions to `Bidding`. Defaults are recorded to reputation at cycle end by `advance_cycle`, so this fn deliberately does not call `record_default` itself.
+
+### Collection Window (admin-tunable)
+
+#### `set_collection_window(env, caller: Address, window: u64) -> Result<(), Error>`
+
+Set the length (seconds) of each `Collecting` window. Applies to the **next** armed deadline (the next `start_collection`/`advance_cycle`), not the currently-running one.
+
+- **Requires:** `caller.require_auth()`, caller must be admin; `window > 0`.
+- **Errors:** `NotAdmin`, `InvalidAmount`.
+- **Default:** `DEFAULT_COLLECTION_WINDOW` = 7 days when unset.
 
 ### Bidding
 
@@ -62,8 +81,9 @@ Move to the next cycle after payout is complete.
 Submit a sealed bid commitment during the `Bidding` state.
 
 - **Commitment:** `SHA-256(amount_le_64 || nonce_le_64)` as a 32-byte vector.
-- **Requires:** `caller.require_auth()`, caller reputation must meet `min_reputation_for_bid`.
-- **Errors:** `NotBidding`, `AlreadyCommitted`, `NotMember`, `InsufficientReputation`.
+- **Requires:** `caller.require_auth()`, caller must have **paid this cycle**, caller reputation must meet `min_reputation_for_bid`.
+- **Errors:** `NotBidding`, `AlreadyCommitted`, `NotMember`, `NotPaid`, `InsufficientReputation`.
+- **Note:** Only members who actually paid may bid — a defaulter cannot compete for a pool it did not fund. This matters once a cycle can reach `Bidding` with defaulters present via `begin_bidding_after_deadline`.
 
 #### `reveal_bid(env, caller: Address, amount: u64, nonce: u64) -> Result<(), Error>`
 
@@ -72,13 +92,13 @@ Reveal a previously committed bid. Contract verifies SHA-256 match.
 - **Requires:** `caller.require_auth()`.
 - **Errors:** `NotBidding`, `AlreadyRevealed`, `CommitmentMismatch`, `NotCommitted`.
 
-#### `execute_payout(env, caller: Address) -> Result<(), Error>`
+#### `execute_payout(env) -> Result<(), Error>`
 
 Execute payout to the lowest unique bidder.
 
-- **Requires:** `caller.require_auth()`, at least one bid must be revealed.
-- **Errors:** `NotBidding`, `NoBidsRevealed`, `NotAdmin`.
-- **Side Effects:** Transfers pool tokens to winner. Calls `Reputation::record_bid_won()`. Transitions state to `Payout`.
+- **Requires:** **permissionless** (no auth argument); at least one bid must be revealed and at least one member must have paid this cycle.
+- **Errors:** `NotBidding`, `NoValidBids`, `NothingCollected`.
+- **Side Effects:** Transfers the pool to the winner. **The pool is sized to `contribution_amount × (number of members who actually paid)`, NOT `num_members`** — so a cycle advanced past a defaulter never over-withdraws more than the contract holds. Calls `Reputation::record_bid_won()`. Transitions state to `Payout`.
 
 ### Disputes
 
@@ -117,6 +137,7 @@ Update linked contract addresses. Only callable by admin.
 | `get_members(env)` | `Vec<Address>` — all member addresses |
 | `get_cycle_state(env, cycle: u32)` | `CycleState` — payments map, bids, winner, winning_bid |
 | `get_member_payment_status(env, cycle: u32, member: Address)` | `MemberStatus` — Pending/Paid/Defaulted/Disputed |
+| `get_collection_deadline(env)` | `Option<u64>` — ledger timestamp the current `Collecting` window ends (absent before first `start_collection`) |
 
 ---
 
@@ -266,32 +287,40 @@ Admin override to resolve a dispute.
 
 ### ChitGroup Errors
 
+> Codes below match the `#[contracterror]` discriminants in `contracts/chit_group/src/lib.rs`
+> (this table was previously out of sync with the enum).
+
 | Code | Name |
 |------|------|
 | 1 | NotAdmin |
-| 2 | NotForming |
-| 3 | NotCollecting |
-| 4 | NotBidding |
-| 5 | NotPayout |
-| 6 | AlreadyInitialized |
-| 7 | GroupFull |
-| 8 | AlreadyMember |
-| 9 | NotMember |
-| 10 | AlreadyPaid |
-| 11 | GroupNotFull |
-| 12 | InsufficientReputation |
-| 13 | AttestationFailed |
-| 14 | AlreadyCommitted |
-| 15 | AlreadyRevealed |
-| 16 | CommitmentMismatch |
-| 17 | NotCommitted |
-| 18 | NoBidsRevealed |
-| 19 | AlreadyPaused |
-| 20 | NotPaused |
-| 21 | DisputeFailed |
-| 22 | ReputationCallFailed |
-| 23 | ContractNotInitialized |
-| 24 | UnauthorizedGroup |
+| 2 | InvalidState |
+| 3 | AlreadyMember |
+| 4 | NotMember |
+| 5 | GroupFull |
+| 6 | InsufficientPayment |
+| 7 | AlreadyPaid |
+| 8 | AlreadyCommitted |
+| 9 | InvalidReveal |
+| 10 | BidTooLow |
+| 11 | NotAttested |
+| 12 | Paused |
+| 13 | Unauthorized |
+| 14 | NotForming |
+| 15 | NotCollecting |
+| 16 | NotBidding |
+| 17 | NotPayout |
+| 18 | NoBids |
+| 19 | InvalidAmount |
+| 20 | ContractNotRegistered |
+| 21 | CycleNotFound |
+| 22 | NotRevealed |
+| 23 | NoValidBids |
+| 24 | AlreadyCompleted |
+| 25 | ReputationTooLow |
+| 26 | AlreadyRevealed |
+| 27 | DeadlineNotReached |
+| 28 | NothingCollected |
+| 29 | NotPaid |
 
 ### Reputation Errors
 

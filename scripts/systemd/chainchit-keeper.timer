@@ -1,0 +1,23 @@
+# systemd USER timer for the ChainChit Phase Transition Keeper.
+#
+# Fires chainchit-keeper.service every 15 minutes (the keeper's own dwell
+# windows decide whether anything actually happens each sweep).
+#
+#   systemctl --user enable --now chainchit-keeper.timer
+#   systemctl --user list-timers chainchit-keeper.timer     # next run
+#   journalctl --user -u chainchit-keeper.service -f         # live logs
+#
+# To keep it running with no one logged in, enable lingering once:
+#   loginctl enable-linger "$USER"
+
+[Unit]
+Description=Run ChainChit Phase Transition Keeper every 15 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+# Run missed sweeps immediately on startup (e.g. after the laptop was asleep).
+Persistent=true
+
+[Install]
+WantedBy=timers.target
