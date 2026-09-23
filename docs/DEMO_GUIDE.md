@@ -82,8 +82,15 @@ Full group lifecycle management:
 - **Members list** — with payment status per cycle
 - **Admin controls** — Start Collection, Execute Payout, Advance Cycle, Pause/Unpause
 - **Contribution Flow** — Pay Contribution button
-- **Bidding Panel** — commit SHA-256 bid hash, reveal bid with amount + nonce
+- **Bidding Panel** — commit SHA-256 bid hash, reveal bid with amount + nonce (only members who paid this cycle can bid)
 - **Raise Dispute** button (opens dispute modal)
+
+### Collection Deadline & Auto-Advance *(on-chain, added 2026-09-22)*
+No group can stall forever waiting on a member who never pays:
+- `start_collection` arms an on-chain **collection deadline** (default 7 days, admin-tunable via `set_collection_window`).
+- If everyone pays, the cycle advances automatically; if not, once the deadline passes **anyone** (the keeper or a member) can call `begin_bidding_after_deadline()` — non-payers are marked **Defaulted** and the group moves to Bidding.
+- The payout pool is sized by **who actually paid** (not member count), so no one over-withdraws and funds never get locked.
+- A scheduled **keeper** (`scripts/systemd/…`, runs as a systemd timer) watches every group and triggers the advance on time, so organizers don't have to babysit the cycle.
 
 ### Disputes (`/disputes`)
 Multi-sig arbitration panel:
@@ -177,6 +184,7 @@ All deployed on **Stellar Testnet** — Soroban RPC: `https://soroban-testnet.st
 
 ### Scene 7: Wrap Up (1:50 – 2:00)
 - Quick mention: dispute resolution, on-chain reputation, 13 testnet users active
+- Robustness: on-chain **collection deadline** + automated keeper mean a defaulter can never stall a cycle
 - Link to live app + GitHub repo
 
 ---
