@@ -14,6 +14,8 @@ import {
   executePayout,
   advanceCycle,
   raiseDispute,
+  getCollectionDeadline,
+  beginBiddingAfterDeadline,
 } from "@/lib/contracts";
 import type { GroupInfo, CycleState } from "@/types";
 
@@ -21,11 +23,13 @@ interface UseChitGroupReturn {
   groupInfo: GroupInfo | null;
   members: string[];
   cycleState: CycleState | null;
+  deadline: number | null;
   loading: boolean;
   error: string | null;
   fetchGroupInfo: () => Promise<void>;
   fetchMembers: () => Promise<void>;
   fetchCycleState: (cycle: number) => Promise<void>;
+  fetchDeadline: () => Promise<void>;
   join: () => Promise<void>;
   start: () => Promise<void>;
   pay: () => Promise<void>;
@@ -34,6 +38,7 @@ interface UseChitGroupReturn {
   payout: () => Promise<void>;
   advance: () => Promise<void>;
   dispute: (reason: string) => Promise<void>;
+  beginBidding: () => Promise<void>;
 }
 
 export function useChitGroup(contractId: string): UseChitGroupReturn {
@@ -41,6 +46,7 @@ export function useChitGroup(contractId: string): UseChitGroupReturn {
   const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
   const [members, setMembers] = useState<string[]>([]);
   const [cycleState, setCycleState] = useState<CycleState | null>(null);
+  const [deadline, setDeadline] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,6 +88,18 @@ export function useChitGroup(contractId: string): UseChitGroupReturn {
     });
   }, [withLoading, contractId]);
 
+  // Silent read — does not toggle `loading` so the countdown effect stays smooth.
+  const fetchDeadline = useCallback(async () => {
+    if (!contractId) return;
+    try {
+      const d = await getCollectionDeadline(contractId);
+      setDeadline(d);
+    } catch {
+      // Legacy groups on pre-upgrade wasm have no such function; treat as null.
+      setDeadline(null);
+    }
+  }, [contractId]);
+
   const join = useCallback(async () => {
     if (!contractId || !address) return;
     await withLoading(async () => { await joinGroup(contractId, address); });
@@ -122,9 +140,14 @@ export function useChitGroup(contractId: string): UseChitGroupReturn {
     await withLoading(async () => { await raiseDispute(contractId, address, reason); });
   }, [withLoading, contractId, address]);
 
+  const beginBidding = useCallback(async () => {
+    if (!contractId) return;
+    await withLoading(async () => { await beginBiddingAfterDeadline(contractId); });
+  }, [withLoading, contractId]);
+
   return {
-    groupInfo, members, cycleState, loading, error,
-    fetchGroupInfo, fetchMembers, fetchCycleState,
-    join, start, pay, commit, reveal, payout, advance, dispute,
+    groupInfo, members, cycleState, deadline, loading, error,
+    fetchGroupInfo, fetchMembers, fetchCycleState, fetchDeadline,
+    join, start, pay, commit, reveal, payout, advance, dispute, beginBidding,
   };
 }

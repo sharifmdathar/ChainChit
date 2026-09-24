@@ -13,21 +13,36 @@ import { getCycleState } from "@/lib/contracts";
 import type { CycleState } from "@/types";
 import toast from "react-hot-toast";
 
+// Human-readable remaining time for the collection-deadline countdown. Big
+// windows show d/h; the final hour shows m/s so the last minute stays legible.
+function formatCollectionRemaining(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export default function GroupDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { connected, address } = useWallet();
   const groupId = params.id as string;
   const {
-    groupInfo, members, cycleState, loading,
-    fetchGroupInfo, fetchMembers, fetchCycleState,
-    join, start, payout, advance, dispute,
+    groupInfo, members, cycleState, deadline, loading,
+    fetchGroupInfo, fetchMembers, fetchCycleState, fetchDeadline,
+    join, start, payout, advance, dispute, beginBidding,
   } = useChitGroup(groupId);
 
   const [historyCycles, setHistoryCycles] = useState<Record<number, CycleState>>({});
   const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
   const [submittingDispute, setSubmittingDispute] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   const fetchAllCycleStates = useCallback(async (currentCycle: number) => {
     const states: Record<number, CycleState> = {};
@@ -46,8 +61,9 @@ export default function GroupDetailPage() {
     if (connected && groupId) {
       fetchGroupInfo().catch((err) => console.error("Error fetching group info:", err));
       fetchMembers().catch((err) => console.error("Error fetching members:", err));
+      fetchDeadline().catch((err) => console.error("Error fetching deadline:", err));
     }
-  }, [connected, groupId, fetchGroupInfo, fetchMembers]);
+  }, [connected, groupId, fetchGroupInfo, fetchMembers, fetchDeadline]);
 
   useEffect(() => {
     if (groupInfo && groupInfo.current_cycle > 0) {
@@ -55,6 +71,14 @@ export default function GroupDetailPage() {
       fetchAllCycleStates(groupInfo.current_cycle).catch((err) => console.error("Error fetching all cycle states:", err));
     }
   }, [groupInfo, fetchCycleState, fetchAllCycleStates]);
+
+  // Drive the collection-deadline countdown with a 1s heartbeat, only while it matters.
+  useEffect(() => {
+    if (groupInfo?.state !== "Collecting" || deadline == null) return;
+    setNowTick(Date.now());
+    const id = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [groupInfo?.state, deadline]);
 
   const handleRaiseDispute = async () => {
     if (!disputeReason) {
@@ -234,6 +258,7 @@ export default function GroupDetailPage() {
               .then(() => { 
                 toast.success("Collection started!");
                 fetchGroupInfo();
+                fetchDeadline();
               })
               .catch((e) => toast.error(e.message)); 
           }} className="btn-primary w-full">
@@ -250,6 +275,48 @@ export default function GroupDetailPage() {
           onPaid={() => { fetchGroupInfo(); fetchCycleState(groupInfo.current_cycle); }}
         />
       )}
+
+      {/* Collection deadline: countdown while open, force-advance CTA once passed */}
+      {groupInfo.state === "Collecting" && deadline != null && (() => {
+        const remaining = deadline * 1000 - nowTick;
+        const expired = remaining <= 0;
+        return (
+          <div className="glass-card p-6 mb-6 border border-white/[0.04]">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                  {expired ? "Collection window closed" : "Collection closes in"}
+                </p>
+                <p className={`text-2xl font-black tabular-nums ${expired ? "text-amber-400" : "text-slate-100"}`}>
+                  {expired ? "Ready to advance" : formatCollectionRemaining(remaining)}
+                </p>
+                <p className="text-chit-muted text-xs mt-1 max-w-md">
+                  {expired
+                    ? "Non-payers are marked Defaulted and the pool moves to bidding. Any member can trigger this — no one can stall the cycle."
+                    : "The cycle auto-advances once this deadline passes."}
+                </p>
+              </div>
+              {expired && (
+                <button
+                  onClick={() => {
+                    beginBidding()
+                      .then(() => {
+                        toast.success("Bidding started — defaulters marked.");
+                        fetchGroupInfo();
+                        fetchCycleState(groupInfo.current_cycle);
+                      })
+                      .catch((e) => toast.error(e.message));
+                  }}
+                  disabled={loading}
+                  className="btn-primary whitespace-nowrap"
+                >
+                  {loading ? "Working\u2026" : "Begin Bidding"}
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {groupInfo.state === "Bidding" && isMember && (
         <BiddingPanel

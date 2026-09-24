@@ -103,7 +103,9 @@ Multi-sig arbitration panel:
 
 ## 3. On-Chain Activity (Real Testnet Users)
 
-13 testnet users actively participating across 2 chit groups:
+Multiple chit groups are live on testnet. Sample — see the
+[factory account](https://stellar.expert/explorer/testnet/account/GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR)
+for the full set of deployed pools:
 
 | Detail | Group A | Group B |
 |--------|---------|---------|
@@ -114,15 +116,24 @@ Multi-sig arbitration panel:
 | **Cycles** | 3 | 6 |
 | **Verify** | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CC2BGN75IGEWLOCRB3NLZO5HBHEH3NGBE6QNUONOVMGFMTEIPV2W5GER) | [Stellar Expert](https://stellar.expert/explorer/testnet/contract/CBWO3KSGJM7TXTKONLDELGGOPQ42XZZZBXW2LTOFK6YSYB4KUONGQILA) |
 
-All wallets funded via Stellar Friendbot. Every join transaction is a real Soroban contract call on testnet.
+All wallets funded via Stellar Friendbot. Every join transaction is a real
+Soroban contract call on testnet. Full provisioning ledger:
+[docs/users_testnet.csv](users_testnet.csv) — 56 Blue Belt wallets joined across
+groups F/G/H plus earlier cohorts.
 
 ### View This Data in the App
-The groups were created with the admin wallet:
-```
-Public: GDJFMVPEBMOYMYHPEHXODG4WLDSTQBD66CEDHQS7WQM7VDGGOJVSN6PR
-Secret: SDLCGLQDC72C5WRR7IX3E74TJE46SIKIDB52ANJQMGHNQSDJ5SJZFWUG
-```
-Import this secret into Freighter → connect → see all 2 groups + 13 users on dashboard + analytics.
+Every pool's member list, contributions, bids and payouts are visible directly
+on **Stellar Expert** — no wallet import required. Drill in via the group
+contract links above, or the factory account for the complete list.
+
+> **Security note:** an earlier revision of this file committed the real seed
+> phrase for the founding organizer wallet, `GDJFMVPEBMO…` (the old revision also
+> printed the wrong public key next to it). That key has since been **rotated**:
+> on 2026-09-24 the wallet was drained into the project admin account and closed
+> via `accountMerge`, so the leaked seed now controls nothing. The seed still
+> exists in the old commit's history, but it is inert. Never commit keys to this
+> repo; for a live walkthrough, use a purpose-scoped seed passed over a private
+> channel.
 
 ---
 
@@ -139,13 +150,19 @@ Import this secret into Freighter → connect → see all 2 groups + 13 users on
 
 ## 5. Smart Contracts
 
-| Contract | Address | LOC | Purpose |
-|----------|---------|-----|---------|
-| **Factory** | `CAJBU4IDXR5PFHY3AKRDUS2LTRID7ONORUXJJYG5LDPTG2QMREINLF6V` | 165 | Dynamic group deployment |
-| **Reputation** | `CDA53WAWFZ2VVOXUUXNQWVETL3KX5DTZ4O6YWNFKJIGNKLBF3NZ5HGSR` | 674 | On-chain scoring |
-| **Identity** | `CAG3PALD7IHTXSJHIAVWWF2N6YICTMU2EO5JK5O3DC7HEJVU4L5JSSSL` | 416 | Sybil-resistant vouching |
-| **Dispute** | `CCX3JYBOO3LHIRKIDXTO755OBUL6W7GSZKPFNPWCTN3NNLZU2WX4OK3B` | 862 | Multi-sig arbitration |
-| **USDC** | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` | — | Testnet USDC token |
+| Contract | Address | Purpose |
+|----------|---------|---------|
+| **Factory** | [`CAYOIBPQO4QK6Q3YD4OYDMFRV4BLFZMQ3NVFUB522VHVC62ZPT5OXUBB`](https://stellar.expert/explorer/testnet/contract/CAYOIBPQO4QK6Q3YD4OYDMFRV4BLFZMQ3NVFUB522VHVC62ZPT5OXUBB) | Dynamic group deployment |
+| **Reputation** | [`CC3SIQEZZCZMCFZRHDOHCVV5WG4JU6XZEZCO3MKF5IX6OKME2Y7KDPA7`](https://stellar.expert/explorer/testnet/contract/CC3SIQEZZCZMCFZRHDOHCVV5WG4JU6XZEZCO3MKF5IX6OKME2Y7KDPA7) | On-chain scoring |
+| **Identity** | [`CAOU576ZR4LZKOD4TM7JQHG2YOGYTHP4REPKM46VRSU4OG7UXIHR6R5X`](https://stellar.expert/explorer/testnet/contract/CAOU576ZR4LZKOD4TM7JQHG2YOGYTHP4REPKM46VRSU4OG7UXIHR6R5X) | Sybil-resistant vouching |
+| **Dispute** | [`CC5SAVATGNP4G5IXAOZ4OF4PVS34D4RCCJHVHHSOJD2XHTAJR6IC6BBW`](https://stellar.expert/explorer/testnet/contract/CC5SAVATGNP4G5IXAOZ4OF4PVS34D4RCCJHVHHSOJD2XHTAJR6IC6BBW) | Multi-sig arbitration |
+| **ChitGroup** | factory-deployed per pool | Rotating-savings pool lifecycle |
+| **USDC** | [`CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`](https://stellar.expert/explorer/testnet/contract/CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA) | Testnet USDC token |
+
+`chit_group.wasm` was upgraded on **2026-09-22** to
+[`dda14266e6996148d4e83244f764d3081c8cf1958e66c10b082af1e3f82fc1f9`](https://stellar.expert/explorer/testnet/tx/0e883ecc070ee298557306ea54a9650ca73931af066f2ad4e1b8418fbf3fd791)
+— adds an on-chain collection deadline, permissionless `begin_bidding_after_deadline`,
+and a payout re-base. Proof in [USERS.md](USERS.md#live-validation-2026-09-22).
 
 All deployed on **Stellar Testnet** — Soroban RPC: `https://soroban-testnet.stellar.org`
 

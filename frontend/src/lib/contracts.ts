@@ -122,6 +122,26 @@ export async function executePayout(contractId: string): Promise<void> {
   await invokeContract(contractId, "execute_payout", []);
 }
 
+// On-chain collection deadline (added 2026-09-22). Returns Unix seconds or
+// null for legacy groups whose wasm never armed a deadline. Option<u64>: None
+// arrives as scvVoid, Some as scvU64.
+export async function getCollectionDeadline(contractId: string): Promise<number | null> {
+  const result = await invokeContract(contractId, "get_collection_deadline", [], false);
+  if (!result) return null;
+  const name = result.switch().name;
+  if (name === "scvVoid") return null;
+  if (name === "scvU64") {
+    try { return scValToU64(result); } catch { return null; }
+  }
+  return null;
+}
+
+// Permissionless force-advance Collecting -> Bidding once the deadline has
+// passed. Non-payers are marked Defaulted. Any signed account may call.
+export async function beginBiddingAfterDeadline(contractId: string): Promise<void> {
+  await invokeContract(contractId, "begin_bidding_after_deadline", []);
+}
+
 export async function advanceCycle(contractId: string, caller: string): Promise<void> {
   await invokeContract(contractId, "advance_cycle", [addressToScVal(caller)]);
 }
