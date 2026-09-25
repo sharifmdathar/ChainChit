@@ -9,23 +9,10 @@ import { ReputationBadge } from "@/components/ReputationBadge";
 import BiddingPanel from "@/components/BiddingPanel";
 import { CycleProgress } from "@/components/CycleProgress";
 import { formatUsdc, getStateColor, shortenAddress } from "@/lib/utils";
+import { formatCollectionRemaining, isDeadlineExpired } from "@/lib/deadline";
 import { getCycleState } from "@/lib/contracts";
 import type { CycleState } from "@/types";
 import toast from "react-hot-toast";
-
-// Human-readable remaining time for the collection-deadline countdown. Big
-// windows show d/h; the final hour shows m/s so the last minute stays legible.
-function formatCollectionRemaining(ms: number): string {
-  const total = Math.max(0, Math.floor(ms / 1000));
-  const d = Math.floor(total / 86400);
-  const h = Math.floor((total % 86400) / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
-}
 
 export default function GroupDetailPage() {
   const params = useParams();
@@ -279,7 +266,7 @@ export default function GroupDetailPage() {
       {/* Collection deadline: countdown while open, force-advance CTA once passed */}
       {groupInfo.state === "Collecting" && deadline != null && (() => {
         const remaining = deadline * 1000 - nowTick;
-        const expired = remaining <= 0;
+        const expired = isDeadlineExpired(deadline, nowTick);
         return (
           <div className="glass-card p-6 mb-6 border border-white/[0.04]">
             <div className="flex items-center justify-between gap-4 flex-wrap">

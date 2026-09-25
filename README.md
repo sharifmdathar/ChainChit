@@ -56,7 +56,7 @@ A chit fund is a rotating savings scheme where a group of members contribute a f
 
 ## On-Chain Activity
 
-**53 testnet users** onboarded with real on-chain activity. The Green Belt
+**56 testnet users** onboarded with real on-chain activity. The Green Belt
 cohort (13 users) is joined this level by two fully-provisioned committees —
 mirroring how a real chit-fund foreman stands up an entire committee for
 members who aren't technical. Every member wallet was created, funded,
@@ -258,7 +258,7 @@ chainChit/
     ├── DEPLOYMENT.md
     ├── SECURITY_AUDIT_CHECKLIST.md
     ├── FEEDBACK_FORM.md    # Google Form question template
-    ├── USERS.md            # Mainnet user ledger
+    ├── USERS.md            # Testnet user ledger
     └── GROWTH_REPORT.md    # Monthly growth reporting
 ```
 
@@ -266,12 +266,12 @@ chainChit/
 
 | Contract | Address |
 |----------|---------|
-| **Factory** | `CAJBU4IDXR5PFHY3AKRDUS2LTRID7ONORUXJJYG5LDPTG2QMREINLF6V` |
+| **Factory** | [`CAYOIBPQO4QK6Q3YD4OYDMFRV4BLFZMQ3NVFUB522VHVC62ZPT5OXUBB`](https://stellar.expert/explorer/testnet/contract/CAYOIBPQO4QK6Q3YD4OYDMFRV4BLFZMQ3NVFUB522VHVC62ZPT5OXUBB) |
 | **ChitGroup** | Deployed dynamically via factory |
-| **Reputation** | `CDA53WAWFZ2VVOXUUXNQWVETL3KX5DTZ4O6YWNFKJIGNKLBF3NZ5HGSR` |
-| **Identity** | `CAG3PALD7IHTXSJHIAVWWF2N6YICTMU2EO5JK5O3DC7HEJVU4L5JSSSL` |
-| **Dispute** | `CCX3JYBOO3LHIRKIDXTO755OBUL6W7GSZKPFNPWCTN3NNLZU2WX4OK3B` |
-| **USDC** | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
+| **Reputation** | [`CC3SIQEZZCZMCFZRHDOHCVV5WG4JU6XZEZCO3MKF5IX6OKME2Y7KDPA7`](https://stellar.expert/explorer/testnet/contract/CC3SIQEZZCZMCFZRHDOHCVV5WG4JU6XZEZCO3MKF5IX6OKME2Y7KDPA7) |
+| **Identity** | [`CAOU576ZR4LZKOD4TM7JQHG2YOGYTHP4REPKM46VRSU4OG7UXIHR6R5X`](https://stellar.expert/explorer/testnet/contract/CAOU576ZR4LZKOD4TM7JQHG2YOGYTHP4REPKM46VRSU4OG7UXIHR6R5X) |
+| **Dispute** | [`CC5SAVATGNP4G5IXAOZ4OF4PVS34D4RCCJHVHHSOJD2XHTAJR6IC6BBW`](https://stellar.expert/explorer/testnet/contract/CC5SAVATGNP4G5IXAOZ4OF4PVS34D4RCCJHVHHSOJD2XHTAJR6IC6BBW) |
+| **USDC** | [`CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`](https://stellar.expert/explorer/testnet/contract/CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA) |
 
 Network: **Stellar Testnet** (Soroban RPC: `https://soroban-testnet.stellar.org`)
 
@@ -308,7 +308,7 @@ the SAC, and prints per-user transaction hashes — copy those into
 ## Roadmap
 
 - **[x] Level 4 — Green Belt**: production MVP, 13 testnet users, live on Vercel, demo video
-- **[x] Level 5 — Blue Belt**: 53 testnet users across 4 committees (2 fully run to completion), pitch deck, feedback workbook, feedback-driven iterations shipped with commit evidence
+- **[x] Level 5 — Blue Belt**: 56 testnet users across 4 committees (2 fully run to completion), pitch deck, feedback workbook, feedback-driven iterations shipped with commit evidence
 - **[ ] Level 6 — Black Belt**: mainnet deployment, 20+ mainnet users, security review, X launch post, community contribution
 - **[ ] Level 7 — Master Track**: 50+ mainnet users, growth report, social proof, monthly product updates
 
