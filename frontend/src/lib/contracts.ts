@@ -87,6 +87,24 @@ export async function getUserGroups(user: string): Promise<string[]> {
   return parseAddressVec(result);
 }
 
+// Public discovery: total groups ever deployed through the factory.
+export async function getGroupCount(): Promise<number> {
+  const result = await invokeContract(CONTRACTS.factory(), "get_group_count", [], false);
+  if (!result) return 0;
+  return scValToU32(result);
+}
+
+// A paginated slice of deployed group addresses (creation order). Returns the
+// empty array for legacy factories that predate the on-chain registry.
+export async function getGroupsPaged(start: number, max: number): Promise<string[]> {
+  const result = await invokeContract(CONTRACTS.factory(), "get_groups", [
+    u32ToScVal(start),
+    u32ToScVal(max),
+  ], false);
+  if (!result) return [];
+  return parseAddressVec(result);
+}
+
 // ===========================================================================
 // ChitGroup Contract
 // ===========================================================================

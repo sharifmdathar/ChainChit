@@ -13,6 +13,8 @@ pub enum DataKey {
     IdentityContract,
     DisputeContract,
     UserGroups(Address), // Map user Address to Vec<Address> of groups they created
+    GroupCount,          // Total number of groups ever deployed (instance storage)
+    GroupAt(u32),        // Persistent index -> group address, for public discovery
 }
 
 #[contracterror]
@@ -131,7 +133,47 @@ impl ChitGroupFactory {
             .instance()
             .set(&DataKey::UserGroups(caller.clone()), &user_groups);
 
+        // Append to the global registry so groups can be discovered publicly.
+        let count: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::GroupCount)
+            .unwrap_or(0);
+        env.storage()
+            .persistent()
+            .set(&DataKey::GroupAt(count), &deployed_address);
+        env.storage()
+            .instance()
+            .set(&DataKey::GroupCount, &(count + 1));
+
         Ok(deployed_address)
+    }
+
+    /// Total number of groups ever deployed through this factory.
+    pub fn get_group_count(env: Env) -> u32 {
+        env.storage()
+            .instance()
+            .get(&DataKey::GroupCount)
+            .unwrap_or(0)
+    }
+
+    /// Address of the group deployed at `index` (0-based), if any.
+    pub fn get_group_at(env: Env, index: u32) -> Option<Address> {
+        env.storage().persistent().get(&DataKey::GroupAt(index))
+    }
+
+    /// A paginated slice of deployed group addresses in creation order.
+    pub fn get_groups(env: Env, start: u32, max: u32) -> Vec<Address> {
+        let count = Self::get_group_count(env.clone());
+        let mut out: Vec<Address> = Vec::new(&env);
+        let mut i = start;
+        while i < count && out.len() < max {
+            if let Some(addr) = Self::get_group_at(env.clone(), i) {
+                out.push_back(addr);
+            }
+            i += 1;
+        }
+        out
     }
 
     /// Admin-only: update the stored chit_group WASM hash.

@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: "/profile", key: "nav.profile" },
   { href: "/create-group", key: "nav.createGroup" },
   { href: "/planner", key: "nav.planner" },
+  { href: "/discover", key: "nav.discover" },
   { href: "/disputes", key: "nav.disputes" },
 ];
 
