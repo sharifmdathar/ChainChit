@@ -11,6 +11,8 @@ import BiddingPanel from "@/components/BiddingPanel";
 import { CycleProgress } from "@/components/CycleProgress";
 import { formatUsdc, getStateColor, shortenAddress } from "@/lib/utils";
 import { formatCollectionRemaining, isDeadlineExpired } from "@/lib/deadline";
+import { useGroupAlerts } from "@/hooks/useGroupAlerts";
+import { enableNotifications, notificationPermission } from "@/lib/notify";
 import { getCycleState } from "@/lib/contracts";
 import type { CycleState } from "@/types";
 import toast from "react-hot-toast";
@@ -42,6 +44,16 @@ function GroupDetailContent() {
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [inviteOpen, setInviteOpen] = useState(false);
   const [autoJoinDone, setAutoJoinDone] = useState(false);
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission | "unsupported">("default");
+
+  // Lifecycle notifications: deadline, bidding, payout, win — toast + system.
+  useGroupAlerts({ groupInfo, cycleState, deadline, address, nowMs: nowTick });
+
+  // Reflect the browser's persisted permission so the bell button only shows
+  // when we can still ask for it.
+  useEffect(() => {
+    setNotifPerm(notificationPermission());
+  }, []);
 
   const fetchAllCycleStates = useCallback(async (currentCycle: number) => {
     const states: Record<number, CycleState> = {};
@@ -216,6 +228,20 @@ function GroupDetailContent() {
               >
                 <span className="text-xs">➕</span> Invite
               </button>
+              {notifPerm !== "unsupported" && notifPerm !== "granted" && (
+                <button
+                  onClick={async () => {
+                    const res = await enableNotifications();
+                    setNotifPerm(res);
+                    if (res === "granted") toast.success("Alerts enabled for this pool");
+                    else if (res === "denied") toast.error("Notifications blocked in your browser settings");
+                  }}
+                  className="btn-secondary text-[10px] py-1 px-2.5 flex items-center gap-1.5 border-sky-500/20 hover:border-sky-500/50 text-sky-400 bg-sky-500/5"
+                  title="Enable desktop alerts for deadlines, bidding & payouts"
+                >
+                  <span className="text-xs">🔔</span> Enable alerts
+                </button>
+              )}
             </div>
           </div>
           <div className="text-left md:text-right">
