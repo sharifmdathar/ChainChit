@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { castVote } from "@/lib/contracts";
 import { shortenAddress } from "@/lib/utils";
+import { friendlyError } from "@/lib/errors";
 import type { DisputeRecord, DisputeStatus, DisputeDecision } from "@/types";
 import toast from "react-hot-toast";
 
@@ -35,7 +36,7 @@ export default function DisputeModal({ dispute, onClose, isArbitrator, onVoted }
       onVoted?.();
       onClose();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Vote failed");
+      toast.error(friendlyError(err));
     } finally {
       setLoading(false);
     }

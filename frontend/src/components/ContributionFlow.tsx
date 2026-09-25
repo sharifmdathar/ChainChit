@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useChitGroup } from "@/hooks/useChitGroup";
 import { useWallet } from "@/hooks/useWallet";
 import { formatUsdc } from "@/lib/utils";
+import { friendlyError } from "@/lib/errors";
 import toast from "react-hot-toast";
 
 interface ContributionFlowProps {
@@ -29,7 +30,7 @@ export function ContributionFlow({ groupId, contributionAmount, cycle, onPaid }:
       toast.success(`Contribution of ${formatUsdc(contributionAmount)} paid for cycle ${cycle}`);
       onPaid?.();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Payment failed");
+      toast.error(friendlyError(err));
     } finally {
       setConfirming(false);
     }

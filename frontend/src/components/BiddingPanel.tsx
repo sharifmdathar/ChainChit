@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useWallet } from "@/hooks/useWallet";
 import { commitBid, revealBid, getCycleState } from "@/lib/contracts";
 import { computeCommitment } from "@/lib/utils";
+import { friendlyError } from "@/lib/errors";
 import type { CycleState } from "@/types";
 import toast from "react-hot-toast";
 
@@ -113,7 +114,7 @@ export default function BiddingPanel({
       toast.success("Bid committed! Remember your bid amount — you must reveal it later.");
       onBidCommitted?.();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Commit failed");
+      toast.error(friendlyError(err));
     } finally {
       setCommitting(false);
     }
@@ -146,7 +147,7 @@ export default function BiddingPanel({
       if (msg.includes("Error(Contract, #20)") || msg.includes("#20")) {
         toast.error("No bid commitment found for this account in this cycle. Please commit your bid first.");
       } else {
-        toast.error(msg || "Reveal failed");
+        toast.error(friendlyError(err));
       }
     } finally {
       setRevealing(false);

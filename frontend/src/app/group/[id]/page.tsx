@@ -12,6 +12,7 @@ import AuctionLivestream from "@/components/AuctionLivestream";
 import { CycleProgress } from "@/components/CycleProgress";
 import { formatUsdc, getStateColor, shortenAddress } from "@/lib/utils";
 import { formatCollectionRemaining, isDeadlineExpired } from "@/lib/deadline";
+import { friendlyError } from "@/lib/errors";
 import { useGroupAlerts } from "@/hooks/useGroupAlerts";
 import { enableNotifications, notificationPermission } from "@/lib/notify";
 import { getCycleState } from "@/lib/contracts";
@@ -105,7 +106,7 @@ function GroupDetailContent() {
         fetchMembers();
         fetchGroupInfo();
       })
-      .catch((e) => toast.error(e.message));
+      .catch((e) => toast.error(friendlyError(e)));
   }, [autoJoinDone, searchParams, connected, address, groupInfo, members, join, fetchMembers, fetchGroupInfo]);
 
   const handleRaiseDispute = async () => {
@@ -293,7 +294,7 @@ function GroupDetailContent() {
                 fetchMembers();
                 fetchGroupInfo();
               })
-              .catch((e) => toast.error(e.message)); 
+              .catch((e) => toast.error(friendlyError(e))); 
           }} className="btn-primary w-full">
             Join This Group
           </button>
@@ -309,7 +310,7 @@ function GroupDetailContent() {
                 fetchGroupInfo();
                 fetchDeadline();
               })
-              .catch((e) => toast.error(e.message)); 
+              .catch((e) => toast.error(friendlyError(e))); 
           }} className="btn-primary w-full">
             Start Collection
           </button>
@@ -354,7 +355,7 @@ function GroupDetailContent() {
                         fetchGroupInfo();
                         fetchCycleState(groupInfo.current_cycle);
                       })
-                      .catch((e) => toast.error(e.message));
+                      .catch((e) => toast.error(friendlyError(e)));
                   }}
                   disabled={loading}
                   className="btn-primary whitespace-nowrap"
@@ -401,7 +402,7 @@ function GroupDetailContent() {
                   fetchGroupInfo();
                   fetchCycleState(groupInfo.current_cycle);
                 })
-                .catch((e) => toast.error(e.message));
+                .catch((e) => toast.error(friendlyError(e)));
             }}
             className="btn-primary w-full"
           >
@@ -419,7 +420,7 @@ function GroupDetailContent() {
                 fetchGroupInfo();
                 fetchCycleState(groupInfo.current_cycle);
               })
-              .catch((e) => toast.error(e.message)); 
+              .catch((e) => toast.error(friendlyError(e))); 
           }} className="btn-primary w-full">
             Advance to Next Cycle
           </button>

@@ -6,6 +6,7 @@ import { initiateSep24Deposit, initiateSep24Withdraw, getSep24Url, addUsdcTrustl
 import { WalletNetwork } from "@creit.tech/stellar-wallets-kit";
 import toast from "react-hot-toast";
 import { faucetUsdcAmount } from "@/lib/faucet";
+import { friendlyError } from "@/lib/errors";
 
 export default function Sep24Ramp() {
   const { connected, address } = useWallet();
@@ -31,7 +32,7 @@ export default function Sep24Ramp() {
       if (data.error) throw new Error(data.error);
       toast.success(`${faucetUsdcAmount()} Test USDC transferred to your wallet successfully!`);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Faucet request failed");
+      toast.error(friendlyError(err));
     } finally {
       setFunding(false);
     }
@@ -56,7 +57,7 @@ export default function Sep24Ramp() {
       }
     } catch (err: unknown) {
       if (win) win.close();
-      toast.error(err instanceof Error ? err.message : "Deposit failed");
+      toast.error(friendlyError(err));
     } finally {
       setDepositing(false);
     }
@@ -81,7 +82,7 @@ export default function Sep24Ramp() {
       }
     } catch (err: unknown) {
       if (win) win.close();
-      toast.error(err instanceof Error ? err.message : "Withdrawal failed");
+      toast.error(friendlyError(err));
     } finally {
       setWithdrawing(false);
     }
@@ -116,7 +117,7 @@ export default function Sep24Ramp() {
                 await addUsdcTrustline();
                 toast.success("USDC Trustline established successfully!");
               } catch (err: unknown) {
-                toast.error(err instanceof Error ? err.message : "Failed to establish trustline");
+                toast.error(friendlyError(err));
               }
             }}
             className="btn-secondary text-xs py-2 px-3.5 flex items-center gap-2"
