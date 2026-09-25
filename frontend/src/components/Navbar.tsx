@@ -1,20 +1,23 @@
 "use client";
 
 import { useWallet } from "@/hooks/useWallet";
+import { useLanguage } from "@/hooks/useLanguage";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { shortenAddress } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_LINKS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/analytics", label: "Analytics" },
-  { href: "/profile", label: "Profile" },
-  { href: "/create-group", label: "Create Group" },
-  { href: "/disputes", label: "Disputes" },
+  { href: "/dashboard", key: "nav.dashboard" },
+  { href: "/analytics", key: "nav.analytics" },
+  { href: "/profile", key: "nav.profile" },
+  { href: "/create-group", key: "nav.createGroup" },
+  { href: "/disputes", key: "nav.disputes" },
 ];
 
 export function Navbar() {
   const { connected, address, disconnect } = useWallet();
+  const { t } = useLanguage();
   const pathname = usePathname();
 
   return (
@@ -43,7 +46,7 @@ export function Navbar() {
                       : "text-slate-400 hover:text-slate-100 border border-transparent"
                   }`}
                 >
-                  {link.label}
+                  {t(link.key)}
                 </Link>
               );
             })}
@@ -51,6 +54,7 @@ export function Navbar() {
         )}
         
         <div className="flex items-center gap-3">
+          <LanguageToggle />
           {connected ? (
             <div className="flex items-center gap-3">
               <Link
@@ -64,13 +68,13 @@ export function Navbar() {
                 onClick={disconnect} 
                 className="px-3 py-1.5 text-xs rounded-xl border border-rose-500/20 hover:border-rose-500/50 hover:bg-rose-950/25 text-rose-400 bg-transparent transition-all duration-300 active:scale-[0.97]"
               >
-                Disconnect
+                {t("nav.disconnect")}
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-slate-500 text-xs">
               <div className="w-1.5 h-1.5 rounded-full bg-slate-600" />
-              <span>Not connected</span>
+              <span>{t("nav.notConnected")}</span>
             </div>
           )}
         </div>

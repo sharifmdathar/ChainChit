@@ -1,11 +1,13 @@
 "use client";
 
 import { useWallet } from "@/hooks/useWallet";
+import { useLanguage } from "@/hooks/useLanguage";
 import { SUPPORTED_WALLETS } from "@/lib/stellar";
 import Link from "next/link";
 
 export default function HomePage() {
   const { connected, address, connect, connecting, network } = useWallet();
+  const { t } = useLanguage();
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12 md:py-20">
@@ -26,12 +28,10 @@ export default function HomePage() {
           {network === "PUBLIC" ? "Stellar Mainnet" : "Stellar Testnet"}
         </div>
         <h1 className="relative text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-[1.02]">
-          <span className="text-gradient">Chit Funds, <br className="hidden sm:inline" />Reinvented</span>
+          <span className="text-gradient">{t("landing.title")}</span>
         </h1>
         <p className="relative text-base md:text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed [text-wrap:balance]">
-          Smart contract custody eliminates fraud. On-chain reputation lets you
-          evaluate strangers before pooling money. Join rotating savings groups beyond your
-          immediate circle — safely.
+          {t("landing.subtitle")}
         </p>
 
         {!connected ? (
@@ -56,7 +56,7 @@ export default function HomePage() {
             </div>
             <div className="block">
               <Link href="/dashboard" className="btn-primary inline-flex items-center gap-2">
-                <span>Go to Dashboard</span>
+                <span>{t("landing.goDashboard")}</span>
                 <svg className="w-4 h-4 transition-transform hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>

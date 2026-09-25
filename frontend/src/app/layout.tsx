@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { WalletProvider } from "@/hooks/useWallet";
+import { LanguageProvider } from "@/hooks/useLanguage";
 import { Navbar } from "@/components/Navbar";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
@@ -27,8 +28,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="grain-overlay" aria-hidden />
 
         <WalletProvider>
-          <Navbar />
-          <main className="min-h-screen pt-20 relative z-10">{children}</main>
+          <LanguageProvider>
+            <Navbar />
+            <main className="min-h-screen pt-20 relative z-10">{children}</main>
+          </LanguageProvider>
           <Toaster
             position="bottom-right"
             toastOptions={{
