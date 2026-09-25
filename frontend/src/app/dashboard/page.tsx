@@ -6,6 +6,7 @@ import { useReputation } from "@/hooks/useReputation";
 import { ReputationBadge } from "@/components/ReputationBadge";
 import { GroupCard } from "@/components/GroupCard";
 import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { StatNumber } from "@/components/StatNumber";
 import Sep24Ramp from "@/components/Sep24Ramp";
 import { basisPointsToPercent, shortenAddress } from "@/lib/utils";
 import { getUserGroups, getGroupInfo, getMembers } from "@/lib/contracts";
@@ -33,7 +34,7 @@ let activityCounter = 0;
 export default function DashboardPage() {
   const router = useRouter();
   const { connected, address } = useWallet();
-  const { compositeScore, onTimeRatio, established, fetchScore } = useReputation();
+  const { compositeScore, onTimeRatio, established, loading: repLoading, fetchScore } = useReputation();
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
@@ -183,14 +184,14 @@ export default function DashboardPage() {
           <div>
             <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-1">Reputation Score</p>
             <div className="flex items-baseline gap-1.5 my-2">
-              <span className="text-3xl font-extrabold text-slate-100">{compositeScore}</span>
+              <StatNumber loading={repLoading} value={compositeScore} />
               <span className="text-xs text-slate-500">/ 1000 Max</span>
             </div>
           </div>
           <div>
             <div className="flex justify-between items-center text-xs mb-1.5">
               <span className="text-slate-400">On-Time Payment Ratio</span>
-              <span className="font-semibold text-emerald-400">{basisPointsToPercent(onTimeRatio).toFixed(1)}%</span>
+              <span className="font-semibold text-emerald-400">{repLoading ? "…" : `${basisPointsToPercent(onTimeRatio).toFixed(1)}%`}</span>
             </div>
             <div className="w-full bg-slate-900 rounded-full h-1.5 border border-white/[0.03]">
               <div 
@@ -206,7 +207,7 @@ export default function DashboardPage() {
           <div>
             <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-1">Active Chit Pools</p>
             <div className="flex items-baseline gap-1.5 my-2">
-              <span className="text-3xl font-extrabold text-slate-100">{groups.length}</span>
+              <StatNumber loading={loading} value={groups.length} />
               <span className="text-xs text-slate-500">Joined Pools</span>
             </div>
           </div>
@@ -226,7 +227,7 @@ export default function DashboardPage() {
         <h2 className="text-xl font-bold text-slate-200 tracking-tight mb-4 flex items-center gap-2">
           <span>Your Saving Groups</span>
           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-900 border border-white/[0.05] text-slate-400">
-            {groups.length}
+            {loading ? "…" : groups.length}
           </span>
         </h2>
         {loading ? (

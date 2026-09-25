@@ -5,6 +5,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { useReputation } from "@/hooks/useReputation";
 import { shortenAddress, basisPointsToPercent } from "@/lib/utils";
 import { getUserGroups, getGroupInfo, getMembers } from "@/lib/contracts";
+import { StatNumber } from "@/components/StatNumber";
 import type { GroupInfo } from "@/types";
 
 const RPC_URL = process.env.NEXT_PUBLIC_STELLAR_RPC_URL || "https://soroban-testnet.stellar.org";
@@ -48,16 +49,9 @@ function timeAgo(ts: number): string {
   return `${Math.floor(diff / 3_600_000)}h ago`;
 }
 
-// A large KPI number that shows a pulsing placeholder while its data is
-// still loading, so a mid-fetch "0" is never mistaken for a real count.
-function StatNumber({ loading, value, className }: { loading: boolean; value: number; className: string }) {
-  if (loading) return <span className="text-3xl font-extrabold text-slate-600 animate-pulse">…</span>;
-  return <span className={`text-3xl font-extrabold ${className}`}>{value}</span>;
-}
-
 export default function AnalyticsPage() {
   const { connected, address, network } = useWallet();
-  const { compositeScore, onTimeRatio, established, fetchScore } = useReputation();
+  const { compositeScore, onTimeRatio, established, loading: repLoading, fetchScore } = useReputation();
   const [groups, setGroups] = useState<GroupWithMembers[]>([]);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
@@ -211,12 +205,12 @@ export default function AnalyticsPage() {
         <div className="glass-card p-5 flex flex-col gap-1.5">
           <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Reputation</p>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-3xl font-extrabold text-slate-100">{compositeScore}</span>
+            <StatNumber loading={repLoading} value={compositeScore} />
             <span className="text-xs text-slate-500">/ 1000</span>
           </div>
           <div className="flex items-center gap-2 text-xs">
             <span className={`font-semibold ${onTimeRatio >= 8000 ? "text-emerald-400" : "text-amber-400"}`}>
-              {basisPointsToPercent(onTimeRatio).toFixed(0)}% on-time
+              {repLoading ? "…" : `${basisPointsToPercent(onTimeRatio).toFixed(0)}% on-time`}
             </span>
             {established && (
               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
