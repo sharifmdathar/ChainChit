@@ -48,6 +48,13 @@ function timeAgo(ts: number): string {
   return `${Math.floor(diff / 3_600_000)}h ago`;
 }
 
+// A large KPI number that shows a pulsing placeholder while its data is
+// still loading, so a mid-fetch "0" is never mistaken for a real count.
+function StatNumber({ loading, value, className }: { loading: boolean; value: number; className: string }) {
+  if (loading) return <span className="text-3xl font-extrabold text-slate-600 animate-pulse">…</span>;
+  return <span className={`text-3xl font-extrabold ${className}`}>{value}</span>;
+}
+
 export default function AnalyticsPage() {
   const { connected, address, network } = useWallet();
   const { compositeScore, onTimeRatio, established, fetchScore } = useReputation();
@@ -133,9 +140,15 @@ export default function AnalyticsPage() {
         <div className="glass-card p-5 flex flex-col gap-1.5">
           <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Total Pooled Value</p>
           <p className="text-3xl font-extrabold text-slate-100">
-            {totalPooled === 0 ? "—" : `${(totalPooled / 10_000_000).toLocaleString()} USDC`}
+            {loading ? (
+              <span className="text-slate-600 animate-pulse">…</span>
+            ) : totalPooled === 0 ? (
+              "—"
+            ) : (
+              `${(totalPooled / 10_000_000).toLocaleString()} USDC`
+            )}
           </p>
-          <p className="text-xs text-slate-500">Across {groups.length} group{groups.length !== 1 ? "s" : ""}</p>
+          <p className="text-xs text-slate-500">Across {loading ? "…" : groups.length} group{!loading && groups.length !== 1 ? "s" : ""}</p>
         </div>
 
         {/* Group States */}
@@ -143,27 +156,31 @@ export default function AnalyticsPage() {
           <p className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">Group States</p>
           <div className="flex items-baseline gap-5">
             <div>
-              <span className="text-3xl font-extrabold text-emerald-400">{activeGroups.length}</span>
+              <StatNumber loading={loading} value={activeGroups.length} className="text-emerald-400" />
               <span className="text-xs text-slate-500 ml-1.5">Active</span>
             </div>
             <div>
-              <span className="text-3xl font-extrabold text-slate-500">{completedGroups.length}</span>
+              <StatNumber loading={loading} value={completedGroups.length} className="text-slate-500" />
               <span className="text-xs text-slate-500 ml-1.5">Completed</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-1.5 mt-1">
-            {(["Forming", "Collecting", "Bidding", "Payout", "Paused"] as const).map((s) => {
-              const count = groups.filter((g) => g.info.state === s).length;
-              if (count === 0) return null;
-              return (
-                <span
-                  key={s}
+            {loading ? (
+              <span className="text-[10px] text-slate-600 animate-pulse">Loading distribution…</span>
+            ) : (
+              (["Forming", "Collecting", "Bidding", "Payout", "Paused"] as const).map((s) => {
+                const count = groups.filter((g) => g.info.state === s).length;
+                if (count === 0) return null;
+                return (
+                  <span
+                    key={s}
                   className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${STATE_COLORS[s] || "text-slate-400 bg-slate-900 border-white/[0.05]"}`}
                 >
                   {s}: {count}
                 </span>
               );
-            })}
+              })
+            )}
           </div>
         </div>
 
