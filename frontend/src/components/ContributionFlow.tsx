@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useChitGroup } from "@/hooks/useChitGroup";
 import { useWallet } from "@/hooks/useWallet";
-import { formatAmount, assetSymbol } from "@/lib/asset";
+import { formatAmount, assetSymbol, assetOf } from "@/lib/asset";
 import { friendlyError } from "@/lib/errors";
 import toast from "react-hot-toast";
 
@@ -37,6 +37,18 @@ export function ContributionFlow({ groupId, contributionAmount, cycle, token, on
       setConfirming(false);
     }
   };
+
+  if (assetOf(token) === "XLM") {
+    return (
+      <div className="glass-card p-6 border border-rose-500/20 animate-fade-in-up">
+        <h3 className="text-xl font-bold text-slate-100 tracking-tight mb-2">Contributions unavailable</h3>
+        <p className="text-slate-400 text-sm leading-relaxed">
+          This pool was created with native XLM, which a contract escrow cannot hold on this network.
+          Create a USDC group instead — those contributions work end to end.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-card p-6 border border-white/[0.04] animate-fade-in-up">
