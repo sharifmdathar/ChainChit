@@ -8,6 +8,7 @@ import { ContributionFlow } from "@/components/ContributionFlow";
 import { InviteModal } from "@/components/InviteModal";
 import { ReputationBadge } from "@/components/ReputationBadge";
 import BiddingPanel from "@/components/BiddingPanel";
+import AuctionLivestream from "@/components/AuctionLivestream";
 import { CycleProgress } from "@/components/CycleProgress";
 import { formatUsdc, getStateColor, shortenAddress } from "@/lib/utils";
 import { formatCollectionRemaining, isDeadlineExpired } from "@/lib/deadline";
@@ -365,6 +366,14 @@ function GroupDetailContent() {
           </div>
         );
       })()}
+
+      {groupInfo.state === "Bidding" && (
+        <AuctionLivestream
+          groupId={params.id as string}
+          cycle={groupInfo.current_cycle}
+          pot={groupInfo.contribution_amount * groupInfo.num_members}
+        />
+      )}
 
       {groupInfo.state === "Bidding" && isMember && (
         <BiddingPanel
