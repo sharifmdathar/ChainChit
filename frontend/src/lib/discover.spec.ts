@@ -74,6 +74,7 @@ describe("filterDiscoverable", () => {
     cand({ id: "full", info: info({ state: "Forming" }), memberCount: 5 }),
     cand({ id: "coll", info: info({ state: "Collecting" }), memberCount: 5 }),
     cand({ id: "bid", info: info({ state: "Bidding" }) }),
+    cand({ id: "pay", info: info({ state: "Payout" }) }),
   ];
 
   it("'open' keeps only joinable groups", () => {
@@ -81,7 +82,7 @@ describe("filterDiscoverable", () => {
   });
 
   it("'all' keeps everything (sorted by pool)", () => {
-    expect(filterDiscoverable(rows, "all")).toHaveLength(4);
+    expect(filterDiscoverable(rows, "all")).toHaveLength(5);
   });
 
   it("'forming' keeps every still-forming group even if full", () => {
@@ -90,5 +91,13 @@ describe("filterDiscoverable", () => {
 
   it("'collecting' keeps only groups in the Collecting state", () => {
     expect(filterDiscoverable(rows, "collecting").map((c) => c.id)).toEqual(["coll"]);
+  });
+
+  it("'bidding' keeps only groups in the Bidding state", () => {
+    expect(filterDiscoverable(rows, "bidding").map((c) => c.id)).toEqual(["bid"]);
+  });
+
+  it("'payout' keeps only groups in the Payout state", () => {
+    expect(filterDiscoverable(rows, "payout").map((c) => c.id)).toEqual(["pay"]);
   });
 });

@@ -1,4 +1,4 @@
-import type { GroupInfo } from "@/types";
+import type { GroupInfo, GroupState } from "@/types";
 
 // Pure helpers behind the Discover page, kept SDK- and React-free so the
 // joinability rules and ordering can be unit-tested without a network.
@@ -10,7 +10,22 @@ export interface DiscoverCandidate {
   isMember: boolean;
 }
 
-export type DiscoverFilter = "open" | "forming" | "collecting" | "all";
+export type DiscoverFilter =
+  | "open"
+  | "forming"
+  | "collecting"
+  | "bidding"
+  | "payout"
+  | "all";
+
+// Lifecycle-state filters (one GroupState each). "open" and "all" are handled
+// specially because they are not a single state.
+const STATE_BY_FILTER: Partial<Record<DiscoverFilter, GroupState>> = {
+  forming: "Forming",
+  collecting: "Collecting",
+  bidding: "Bidding",
+  payout: "Payout",
+};
 
 export function poolOf(info: GroupInfo): number {
   return info.contribution_amount * info.num_members;
@@ -44,13 +59,12 @@ export function filterDiscoverable(
   cands: DiscoverCandidate[],
   filter: DiscoverFilter,
 ): DiscoverCandidate[] {
+  const state = STATE_BY_FILTER[filter];
   const rows =
-    filter === "forming"
-      ? cands.filter((c) => c.info.state === "Forming")
-      : filter === "collecting"
-        ? cands.filter((c) => c.info.state === "Collecting")
-        : filter === "open"
-          ? cands.filter(isJoinable)
-          : cands;
+    filter === "open"
+      ? cands.filter(isJoinable)
+      : state
+        ? cands.filter((c) => c.info.state === state)
+        : cands;
   return sortCandidates(rows);
 }

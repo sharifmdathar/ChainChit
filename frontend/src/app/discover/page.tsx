@@ -17,6 +17,8 @@ const FILTERS: { code: DiscoverFilter; label: string }[] = [
   { code: "open", label: "Open to join" },
   { code: "forming", label: "Forming" },
   { code: "collecting", label: "Collecting" },
+  { code: "bidding", label: "Bidding" },
+  { code: "payout", label: "Payout" },
 ];
 
 export default function DiscoverPage() {
