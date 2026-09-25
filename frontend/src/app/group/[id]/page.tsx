@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useChitGroup } from "@/hooks/useChitGroup";
 import { useWallet } from "@/hooks/useWallet";
 import { ContributionFlow } from "@/components/ContributionFlow";
+import { InviteModal } from "@/components/InviteModal";
 import { ReputationBadge } from "@/components/ReputationBadge";
 import BiddingPanel from "@/components/BiddingPanel";
 import { CycleProgress } from "@/components/CycleProgress";
@@ -15,8 +16,17 @@ import type { CycleState } from "@/types";
 import toast from "react-hot-toast";
 
 export default function GroupDetailPage() {
+  return (
+    <Suspense fallback={<div className="max-w-4xl mx-auto px-4 py-16 text-center animate-pulse-glow text-chit-muted">Loading group…</div>}>
+      <GroupDetailContent />
+    </Suspense>
+  );
+}
+
+function GroupDetailContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { connected, address } = useWallet();
   const groupId = params.id as string;
   const {
@@ -30,6 +40,8 @@ export default function GroupDetailPage() {
   const [disputeReason, setDisputeReason] = useState("");
   const [submittingDispute, setSubmittingDispute] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [autoJoinDone, setAutoJoinDone] = useState(false);
 
   const fetchAllCycleStates = useCallback(async (currentCycle: number) => {
     const states: Record<number, CycleState> = {};
@@ -66,6 +78,22 @@ export default function GroupDetailPage() {
     const id = setInterval(() => setNowTick(Date.now()), 1000);
     return () => clearInterval(id);
   }, [groupInfo?.state, deadline]);
+
+  // Invite deep link (?join=1): once the group is loaded, auto-prompt Join for
+  // visitors who aren't members yet (during Forming; harmless otherwise).
+  useEffect(() => {
+    if (autoJoinDone || searchParams.get("join") !== "1") return;
+    if (!connected || !address || !groupInfo || groupInfo.state !== "Forming") return;
+    if (members.includes(address)) { setAutoJoinDone(true); return; }
+    setAutoJoinDone(true);
+    join()
+      .then(() => {
+        toast.success("Joined the pool!");
+        fetchMembers();
+        fetchGroupInfo();
+      })
+      .catch((e) => toast.error(e.message));
+  }, [autoJoinDone, searchParams, connected, address, groupInfo, members, join, fetchMembers, fetchGroupInfo]);
 
   const handleRaiseDispute = async () => {
     if (!disputeReason) {
@@ -180,6 +208,13 @@ export default function GroupDetailPage() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                 </svg>
+              </button>
+              <button
+                onClick={() => setInviteOpen(true)}
+                className="btn-secondary text-[10px] py-1 px-2.5 flex items-center gap-1.5 border-indigo-500/20 hover:border-indigo-500/50 text-indigo-400 bg-indigo-500/5"
+                title="Share invite link"
+              >
+                <span className="text-xs">➕</span> Invite
               </button>
             </div>
           </div>
@@ -411,6 +446,9 @@ export default function GroupDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Invite share sheet */}
+      {inviteOpen && <InviteModal groupId={groupId} onClose={() => setInviteOpen(false)} />}
 
       {/* Dispute Modal */}
       {isDisputeModalOpen && (
