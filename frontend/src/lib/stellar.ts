@@ -196,6 +196,11 @@ export async function invokeContract(
   const simResponse = await server.simulateTransaction(tx);
 
   if (rpc.Api.isSimulationError(simResponse)) {
+    // Surface the raw ledger/host reason; friendlyError() masks it for users.
+    console.error(
+      `[soroban] simulation failed — ${method} @ ${contractId}:`,
+      simResponse.error,
+    );
     throw new Error(`Simulation error: ${simResponse.error}`);
   }
 
