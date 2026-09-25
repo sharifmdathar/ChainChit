@@ -5,6 +5,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { useReputation } from "@/hooks/useReputation";
 import { shortenAddress, getReputationColor, getReputationLabel, basisPointsToPercent } from "@/lib/utils";
 import AttestationFlow from "@/components/AttestationFlow";
+import ChitScoreCard from "@/components/ChitScoreCard";
 import { ReputationBadge } from "@/components/ReputationBadge";
 import toast from "react-hot-toast";
 
@@ -118,6 +119,22 @@ export default function ProfilePage() {
           </>
         )}
       </div>
+
+      {/* Shareable ChitScore card */}
+      {reputation && (
+        <ChitScoreCard
+          input={{
+            address,
+            score: compositeScore ?? 0,
+            onTimePct:
+              reputation.total_payments_due > 0
+                ? (reputation.on_time_payments / reputation.total_payments_due) * 100
+                : 0,
+            cyclesCompleted: reputation.cycles_completed,
+            bidsWon: reputation.bids_won,
+          }}
+        />
+      )}
 
       {/* Attestation Card */}
       <AttestationFlow targetAddress={address} />
