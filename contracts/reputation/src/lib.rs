@@ -55,6 +55,14 @@ pub enum Error {
     ContractNotInitialized = 6,
 }
 
+// Neutral defaults for accounts that don't yet have enough history to be
+// fairly scored. A brand-new member should look "unproven but fine" rather
+// than falsely indistinguishable from a chronic defaulter.
+/// Midpoint of the 0-1000 composite scale.
+const NEUTRAL_SCORE: u32 = 500;
+/// 100% expressed in basis points.
+const NEUTRAL_RATIO: u32 = 10_000;
+
 // ---------------------------------------------------------------------------
 // Contract
 // ---------------------------------------------------------------------------
@@ -327,7 +335,8 @@ impl ReputationContract {
     }
 
     /// Get on-time payment ratio in basis points (0-10000).
-    /// 10000 = 100% on time. Returns 0 if no payments due.
+    /// 10000 = 100% on time. Until the member has any payment history the ratio
+    /// is reported as a neutral 100% (10000) — an empty record is not a late one.
     pub fn get_on_time_ratio(env: Env, member: Address) -> u32 {
         let map: Map<Address, ReputationData> = env
             .storage()
@@ -337,11 +346,11 @@ impl ReputationContract {
 
         let data = match map.get(member) {
             Some(d) => d,
-            None => return 0,
+            None => return NEUTRAL_RATIO,
         };
 
         if data.total_payments_due == 0 {
-            return 0;
+            return NEUTRAL_RATIO;
         }
 
         // (on_time / total) * 10000 in integer math
@@ -370,6 +379,10 @@ impl ReputationContract {
 
     /// Get a composite reputation score (0-1000) for quick display.
     /// Factors: on-time ratio (60%), cycles completed (20%), no disputes (10%), bids won (10%).
+    /// Trust floor: while a member is not yet "established" (fewer payments than
+    /// `MinPaymentsForTrust`) the score never drops below the neutral 500, so new
+    /// members neither look bad nor get gated out of `min_reputation_for_bid`. Strong
+    /// early history can still exceed the floor (it is a floor, not a cap).
     pub fn get_composite_score(env: Env, member: Address) -> u32 {
         let map: Map<Address, ReputationData> = env
             .storage()
@@ -377,9 +390,18 @@ impl ReputationContract {
             .get(&DataKey::ReputationMap)
             .unwrap_or_else(|| Map::new(&env));
 
-        let data = match map.get(member) {
+        let data = match map.get(member.clone()) {
             Some(d) => d,
-            None => return 0,
+            None => ReputationData {
+                address: member.clone(),
+                on_time_payments: 0,
+                total_payments_due: 0,
+                cycles_defaulted: 0,
+                cycles_completed: 0,
+                bids_won: 0,
+                disputes_raised: 0,
+                disputes_lost: 0,
+            },
         };
 
         // On-time ratio component (0-600)
@@ -399,7 +421,19 @@ impl ReputationContract {
         // Bids won component (0-100), capped at 5
         let bid_score = data.bids_won.min(5) as u32 * 20;
 
-        on_time_score + cycle_score + dispute_score + bid_score
+        let raw = on_time_score + cycle_score + dispute_score + bid_score;
+
+        let min: u32 = env
+            .storage()
+            .instance()
+            .get(&DataKey::MinPaymentsForTrust)
+            .unwrap_or(3);
+
+        if data.total_payments_due < min {
+            return raw.max(NEUTRAL_SCORE);
+        }
+
+        raw
     }
 
     // -----------------------------------------------------------------------
@@ -657,7 +691,7 @@ mod test {
     }
 
     #[test]
-    fn test_stranger_zero_reputation() {
+    fn test_stranger_neutral_defaults() {
         let env = Env::default();
         env.mock_all_auths();
         let admin = Address::generate(&env);
@@ -667,8 +701,49 @@ mod test {
         client.initialize(&admin, &3_u32);
 
         let stranger = Address::generate(&env);
-        assert_eq!(client.get_on_time_ratio(&stranger), 0);
-        assert_eq!(client.get_composite_score(&stranger), 0);
+        // No history → neutral, not a misleading 0% / 0 score.
+        assert_eq!(client.get_on_time_ratio(&stranger), 10_000);
+        assert_eq!(client.get_composite_score(&stranger), 500);
         assert!(!client.is_established(&stranger));
+    }
+
+    #[test]
+    fn test_newcomer_trust_floor_protects_early_default() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let admin = Address::generate(&env);
+        let contract_id = env.register(ReputationContract, ());
+        let client = ReputationContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &3_u32);
+        let group = Address::generate(&env);
+        client.authorize_group(&admin, &group);
+
+        let member = Address::generate(&env);
+        // A single default before the 3-payment establishment threshold must not
+        // tank the newcomer below the neutral floor.
+        client.record_default(&group, &member);
+        assert_eq!(client.get_composite_score(&member), 500);
+        assert!(!client.is_established(&member));
+    }
+
+    #[test]
+    fn test_early_good_history_is_not_capped() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let admin = Address::generate(&env);
+        let contract_id = env.register(ReputationContract, ());
+        let client = ReputationContractClient::new(&env, &contract_id);
+
+        client.initialize(&admin, &5_u32);
+        let group = Address::generate(&env);
+        client.authorize_group(&admin, &group);
+
+        let member = Address::generate(&env);
+        // Perfect but still-not-established history scores ABOVE the floor.
+        client.record_payment(&group, &member, &true);
+        client.record_payment(&group, &member, &true);
+        assert!(!client.is_established(&member));
+        assert!(client.get_composite_score(&member) > 500);
     }
 }
