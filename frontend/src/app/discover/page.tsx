@@ -13,9 +13,10 @@ import toast from "react-hot-toast";
 const PAGE = 24; // how many of the most-recent groups to inspect
 
 const FILTERS: { code: DiscoverFilter; label: string }[] = [
+  { code: "all", label: "All live" },
   { code: "open", label: "Open to join" },
   { code: "forming", label: "Forming" },
-  { code: "all", label: "All live" },
+  { code: "collecting", label: "Collecting" },
 ];
 
 export default function DiscoverPage() {
@@ -24,7 +25,7 @@ export default function DiscoverPage() {
   const { t } = useLanguage();
   const [candidates, setCandidates] = useState<DiscoverCandidate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<DiscoverFilter>("open");
+  const [filter, setFilter] = useState<DiscoverFilter>("all");
 
   const load = useCallback(async () => {
     setLoading(true);

@@ -72,6 +72,7 @@ describe("filterDiscoverable", () => {
   const rows = [
     cand({ id: "open", info: info({ state: "Forming" }) }),
     cand({ id: "full", info: info({ state: "Forming" }), memberCount: 5 }),
+    cand({ id: "coll", info: info({ state: "Collecting" }), memberCount: 5 }),
     cand({ id: "bid", info: info({ state: "Bidding" }) }),
   ];
 
@@ -80,10 +81,14 @@ describe("filterDiscoverable", () => {
   });
 
   it("'all' keeps everything (sorted by pool)", () => {
-    expect(filterDiscoverable(rows, "all")).toHaveLength(3);
+    expect(filterDiscoverable(rows, "all")).toHaveLength(4);
   });
 
   it("'forming' keeps every still-forming group even if full", () => {
     expect(filterDiscoverable(rows, "forming").map((c) => c.id).sort()).toEqual(["full", "open"]);
+  });
+
+  it("'collecting' keeps only groups in the Collecting state", () => {
+    expect(filterDiscoverable(rows, "collecting").map((c) => c.id)).toEqual(["coll"]);
   });
 });

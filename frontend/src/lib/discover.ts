@@ -10,7 +10,7 @@ export interface DiscoverCandidate {
   isMember: boolean;
 }
 
-export type DiscoverFilter = "open" | "forming" | "all";
+export type DiscoverFilter = "open" | "forming" | "collecting" | "all";
 
 export function poolOf(info: GroupInfo): number {
   return info.contribution_amount * info.num_members;
@@ -47,8 +47,10 @@ export function filterDiscoverable(
   const rows =
     filter === "forming"
       ? cands.filter((c) => c.info.state === "Forming")
-      : filter === "open"
-        ? cands.filter(isJoinable)
-        : cands;
+      : filter === "collecting"
+        ? cands.filter((c) => c.info.state === "Collecting")
+        : filter === "open"
+          ? cands.filter(isJoinable)
+          : cands;
   return sortCandidates(rows);
 }
