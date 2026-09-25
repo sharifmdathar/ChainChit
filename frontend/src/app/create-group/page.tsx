@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@/hooks/useWallet";
 import { createGroup } from "@/lib/contracts";
+import { NATIVE_TOKEN_ADDRESS, type PoolAsset } from "@/lib/asset";
 import toast from "react-hot-toast";
 
 export default function CreateGroupPage() {
   const router = useRouter();
   const { connected, address } = useWallet();
   const [contribution, setContribution] = useState("");
+  const [asset, setAsset] = useState<PoolAsset>("USDC");
   const [numMembers, setNumMembers] = useState("5");
   const [totalCycles, setTotalCycles] = useState("5");
   const [minAttestation, setMinAttestation] = useState("0");
@@ -36,10 +38,16 @@ export default function CreateGroupPage() {
 
     setLoading(true);
     try {
-      const usdcContract = process.env.NEXT_PUBLIC_USDC_CONTRACT || "";
-      if (!usdcContract) {
-        toast.error("USDC contract not configured");
-        return;
+      let token: string;
+      if (asset === "XLM") {
+        token = NATIVE_TOKEN_ADDRESS;
+      } else {
+        const usdcContract = process.env.NEXT_PUBLIC_USDC_CONTRACT || "";
+        if (!usdcContract) {
+          toast.error("USDC contract not configured");
+          return;
+        }
+        token = usdcContract;
       }
 
       const salt = new Uint8Array(32);
@@ -48,7 +56,7 @@ export default function CreateGroupPage() {
       const groupId = await createGroup({
         caller: address,
         salt,
-        token: usdcContract,
+        token,
         contributionAmount: contribAmount,
         numMembers: members,
         totalCycles: cycles,
@@ -78,6 +86,10 @@ export default function CreateGroupPage() {
   const previewMembers = Number(numMembers) || 0;
   const previewCycles = Number(totalCycles) || 0;
   const previewPool = previewContribution * previewMembers;
+  const money = (n: number) =>
+    asset === "XLM"
+      ? `${n.toLocaleString()} XLM`
+      : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 animate-fade-in-up">
@@ -91,7 +103,29 @@ export default function CreateGroupPage() {
         <form onSubmit={handleSubmit} className="md:col-span-3 glass-card p-6 space-y-5 border border-white/[0.04]">
           <div>
             <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
-              Contribution Amount (USDC)
+              Pool Asset
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["USDC", "XLM"] as PoolAsset[]).map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => setAsset(a)}
+                  className={`px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                    asset === a
+                      ? "bg-indigo-500/15 border-indigo-500 text-indigo-200 ring-1 ring-indigo-500"
+                      : "bg-slate-950 border-white/[0.08] text-slate-400 hover:border-white/20"
+                  }`}
+                >
+                  {a === "USDC" ? "USDC (stable)" : "XLM (native)"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">
+              Contribution Amount ({asset})
             </label>
             <input
               type="number"
@@ -193,7 +227,7 @@ export default function CreateGroupPage() {
               
               <div className="mb-4">
                 <p className="text-3xl font-black text-slate-100 tracking-tight">
-                  {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(previewPool)}
+                  {money(previewPool)}
                 </p>
                 <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-0.5">Estimated Pool Per Cycle</p>
               </div>
@@ -204,7 +238,7 @@ export default function CreateGroupPage() {
                 <div>
                   <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Contribution</p>
                   <p className="font-semibold text-slate-200">
-                    {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(previewContribution)}
+                    {money(previewContribution)}
                   </p>
                 </div>
                 <div>

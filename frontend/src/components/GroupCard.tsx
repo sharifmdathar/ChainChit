@@ -1,5 +1,6 @@
 import type { GroupInfo } from "@/types";
-import { getStateColor, formatUsdc } from "@/lib/utils";
+import { getStateColor } from "@/lib/utils";
+import { formatAmount, assetSymbol } from "@/lib/asset";
 
 interface GroupCardProps {
   group: GroupInfo;
@@ -23,13 +24,13 @@ export function GroupCard({ group, memberCount, onClick }: GroupCardProps) {
             {group.state}
           </span>
           <span className="text-slate-400 text-xs font-semibold">
-            Cycle {group.current_cycle}/{group.total_cycles}
+            {assetSymbol(group.token)} · Cycle {group.current_cycle}/{group.total_cycles}
           </span>
         </div>
         
         <div className="mb-4">
           <p className="text-2xl font-black text-slate-100 tracking-tight">
-            {formatUsdc(group.contribution_amount * group.num_members)}
+            {formatAmount(group.contribution_amount * group.num_members, group.token)}
           </p>
           <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-0.5">Pool Per Cycle</p>
         </div>
@@ -39,7 +40,7 @@ export function GroupCard({ group, memberCount, onClick }: GroupCardProps) {
         <div className="grid grid-cols-2 gap-2 text-xs mb-4">
           <div>
             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Contribution</p>
-            <p className="font-semibold text-slate-200">{formatUsdc(group.contribution_amount)}</p>
+            <p className="font-semibold text-slate-200">{formatAmount(group.contribution_amount, group.token)}</p>
           </div>
           <div>
             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Members</p>

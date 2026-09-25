@@ -10,7 +10,8 @@ import { ReputationBadge } from "@/components/ReputationBadge";
 import BiddingPanel from "@/components/BiddingPanel";
 import AuctionLivestream from "@/components/AuctionLivestream";
 import { CycleProgress } from "@/components/CycleProgress";
-import { formatUsdc, getStateColor, shortenAddress } from "@/lib/utils";
+import { getStateColor, shortenAddress } from "@/lib/utils";
+import { formatAmount } from "@/lib/asset";
 import { formatCollectionRemaining, isDeadlineExpired } from "@/lib/deadline";
 import { friendlyError } from "@/lib/errors";
 import { useGroupAlerts } from "@/hooks/useGroupAlerts";
@@ -248,7 +249,7 @@ function GroupDetailContent() {
           </div>
           <div className="text-left md:text-right">
             <p className="text-3xl font-black text-slate-100 tracking-tight">
-              {formatUsdc(groupInfo.contribution_amount * groupInfo.num_members)}
+              {formatAmount(groupInfo.contribution_amount * groupInfo.num_members, groupInfo.token)}
             </p>
             <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mt-0.5">Prize Pool Per Cycle</p>
           </div>
@@ -257,7 +258,7 @@ function GroupDetailContent() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 text-sm tabular">
           <div className="p-3 rounded-xl bg-slate-900/30 border border-white/[0.02]">
             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Cycle Contribution</p>
-            <p className="font-semibold text-slate-200">{formatUsdc(groupInfo.contribution_amount)}</p>
+            <p className="font-semibold text-slate-200">{formatAmount(groupInfo.contribution_amount, groupInfo.token)}</p>
           </div>
           <div className="p-3 rounded-xl bg-slate-900/30 border border-white/[0.02]">
             <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">Members Enrolled</p>
@@ -322,6 +323,7 @@ function GroupDetailContent() {
           groupId={params.id as string}
           contributionAmount={groupInfo.contribution_amount}
           cycle={groupInfo.current_cycle}
+          token={groupInfo.token}
           onPaid={() => { fetchGroupInfo(); fetchCycleState(groupInfo.current_cycle); }}
         />
       )}
@@ -434,7 +436,7 @@ function GroupDetailContent() {
           {cycleState.winner && (
             <div className="mb-4 p-3 rounded-lg bg-chit-success/10 border border-chit-success/20">
               <p className="text-chit-success text-sm font-medium">Winner: {shortenAddress(cycleState.winner)}</p>
-              <p className="text-chit-muted text-xs">Winning bid: {formatUsdc(cycleState.winning_bid)}</p>
+              <p className="text-chit-muted text-xs">Winning bid: {formatAmount(cycleState.winning_bid, groupInfo.token)}</p>
             </div>
           )}
           <div>
@@ -473,7 +475,7 @@ function GroupDetailContent() {
                   </div>
                   <div className="text-right">
                     <p className="font-medium text-emerald-400">
-                      {state.winning_bid > 0 ? formatUsdc(state.winning_bid) : "No bid (default)"}
+                      {state.winning_bid > 0 ? formatAmount(state.winning_bid, groupInfo.token) : "No bid (default)"}
                     </p>
                     <p className="text-chit-muted text-xs">Winning Bid</p>
                   </div>
