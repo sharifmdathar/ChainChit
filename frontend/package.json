@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_ENV=development next dev",
-    "build": "next build",
+    "dev": "NODE_ENV=development next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "test": "vitest run",
     "type-check": "tsc --noEmit"
   },
@@ -25,13 +25,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.6.1",
-    "eslint": "^10.11.0",
+    "eslint": "^9",
     "eslint-config-next": "^16",
     "jsqr": "^1.4.0",
     "postcss": "^8.5.28",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^3",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2",
+    "typescript": "^5.9",
     "vitest": "^5.0.2"
   }
 }
